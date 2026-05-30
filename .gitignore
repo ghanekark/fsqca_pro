@@ -1,0 +1,12 @@
+qca_env/
+build/
+dist/
+
+__pycache__/
+*.pyc
+*.pyo
+
+.vscode/
+.idea/
+
+.env
