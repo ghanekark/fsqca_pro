@@ -1,0 +1,51 @@
+# Scoped Ignorance for Gemini CLI
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+
+# Virtual Environments
+.venv/
+venv/
+venv_release/
+env/
+ENV/
+
+# Build & Distribution
+build/
+dist/
+*.spec
+*.egg-info/
+*.egg
+
+# Secrets & Environment
+.env
+.env.*
+
+# Logs
+*.log
+
+# IDEs and Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS Clutter
+.DS_Store
+Thumbs.db
+
+# Large Data & Media (Crucial for a QCA App)
+*.csv
+*.xlsx
+*.sqlite3
+*.db
+*.dat
+*.meta.json
+
+# Qt Generated Resource Binaries (If you compile .qrc files)
+*_rc.py

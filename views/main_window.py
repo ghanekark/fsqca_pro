@@ -1,3 +1,6 @@
+import pandas as pd
+import numpy as np
+from typing import Dict, Any, Optional
 from PyQt6.QtWidgets import (QMainWindow, QTableWidget, QTableWidgetItem, 
                              QVBoxLayout, QWidget, QSplitter, QTextEdit)
 from PyQt6.QtGui import QAction, QFont
@@ -105,6 +108,12 @@ class MainWindow(QMainWindow):
         self.action_stats_descriptives = QAction("Descriptives...", self)
         self.stats_menu.addAction(self.action_stats_descriptives)
         
+        # --- View Menu ---
+        self.view_menu = menubar.addMenu("&View")
+        self.action_view_dark_mode = QAction("Dark Mode", self)
+        self.action_view_dark_mode.setCheckable(True)
+        self.view_menu.addAction(self.action_view_dark_mode)
+        
         # --- Graphs Menu ---
         self.graphs_menu = menubar.addMenu("&Graphs")
         
@@ -131,9 +140,10 @@ class MainWindow(QMainWindow):
         # Initial sizes: prioritize the table
         self.splitter.setSizes([500, 250])
 
-    def populate_grid(self, dataframe):
+    def populate_grid(self, dataframe: pd.DataFrame, calibration_metadata: Dict[str, Any] = None) -> None:
         """
         Clears the table and populates it with data from a pandas DataFrame.
+        Sets tooltips on headers for variables with calibration metadata.
         """
         self.table.clear()
         
@@ -148,11 +158,34 @@ class MainWindow(QMainWindow):
         
         # Set headers
         self.table.setHorizontalHeaderLabels(dataframe.columns)
+
+        # Set Tooltips for Metadata (PRD 004 Audit View)
+        for i, col in enumerate(dataframe.columns):
+            if calibration_metadata and col in calibration_metadata:
+                meta = calibration_metadata[col]
+                anchors = meta.get('anchors', {})
+                tooltip = (
+                    f"Variable: {col}\n"
+                    f"Source: {meta.get('source', 'N/A')}\n"
+                    f"--- Anchors ---\n"
+                    f"Full (1.0): {anchors.get('full', 'N/A')}\n"
+                    f"Cross (0.5): {anchors.get('cross', 'N/A')}\n"
+                    f"Non (0.0): {anchors.get('non', 'N/A')}\n"
+                    f"--- Rationale ---\n"
+                    f"{meta.get('rationale', 'No rationale provided.')}"
+                )
+                header_item = self.table.horizontalHeaderItem(i)
+                if header_item:
+                    header_item.setToolTip(tooltip)
         
         # Populate rows
         for row_idx, row in enumerate(dataframe.itertuples(index=False)):
             for col_idx, value in enumerate(row):
-                item = QTableWidgetItem(str(value))
+                # Handle numeric formatting for readability
+                if isinstance(value, (float, np.float64)):
+                    item = QTableWidgetItem(f"{value:.4f}")
+                else:
+                    item = QTableWidgetItem(str(value))
                 self.table.setItem(row_idx, col_idx, item)
         
         self.table.resizeColumnsToContents()

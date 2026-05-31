@@ -128,7 +128,6 @@ class EditTruthTableDialog(QDialog):
 
         # Analysis Button
         self.analysis_btn = QPushButton("Standard Analyses")
-        self.analysis_btn.setStyleSheet("font-weight: bold; padding: 10px; background-color: #e8f5e9; color: black;")
         self.analysis_btn.clicked.connect(self.on_standard_analysis)
         toolbar_layout.addWidget(self.analysis_btn)
 

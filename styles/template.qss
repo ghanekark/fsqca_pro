@@ -1,0 +1,78 @@
+/* fsqca_pro Global Template QSS */
+
+QMainWindow {
+    background-color: ${bg_primary};
+    color: ${text_primary};
+}
+
+QWidget {
+    background-color: ${bg_primary};
+    color: ${text_primary};
+    font-family: "Segoe UI", "Arial", sans-serif;
+}
+
+QSplitter::handle {
+    background-color: ${border_color};
+}
+
+QMenuBar {
+    background-color: ${bg_secondary};
+    color: ${text_primary};
+    border-bottom: 1px solid ${border_color};
+}
+
+QMenuBar::item:selected {
+    background-color: ${selection_bg};
+    color: ${selection_text};
+}
+
+QMenu {
+    background-color: ${bg_secondary};
+    color: ${text_primary};
+    border: 1px solid ${border_color};
+}
+
+QMenu::item:selected {
+    background-color: ${selection_bg};
+    color: ${selection_text};
+}
+
+QTableWidget {
+    background-color: ${bg_primary};
+    alternate-background-color: ${bg_secondary};
+    gridline-color: ${border_color};
+    border: 1px solid ${border_color};
+}
+
+QHeaderView::section {
+    background-color: ${bg_secondary};
+    color: ${text_primary};
+    padding: 4px;
+    border: 1px solid ${border_color};
+}
+
+QTextEdit {
+    background-color: ${bg_primary};
+    color: ${text_primary};
+    border: 1px solid ${border_color};
+}
+
+QPushButton {
+    background-color: ${bg_secondary};
+    border: 1px solid ${border_color};
+    padding: 5px 15px;
+    min-width: 80px;
+}
+
+QPushButton:hover {
+    background-color: ${selection_bg};
+    color: ${selection_text};
+}
+
+QDialog {
+    background-color: ${bg_primary};
+}
+
+QLabel {
+    background: transparent;
+}

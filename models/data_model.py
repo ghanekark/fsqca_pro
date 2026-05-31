@@ -4,24 +4,37 @@ import os
 import itertools
 from itertools import combinations
 import re
+import json
+import logging
+from typing import Dict, Any, Tuple, Optional, List
 from models.minimizer import QCAMinimizer
 
 class QCADataModel:
-    def __init__(self):
-        self.dataframe = None
-        self.truth_table_df = None
-        self._full_dataframe = None
+    def __init__(self) -> None:
+        """Initializes the QCA Data Model with empty storage for data and metadata."""
+        self.dataframe: Optional[pd.DataFrame] = None
+        self.truth_table_df: Optional[pd.DataFrame] = None
+        self._full_dataframe: Optional[pd.DataFrame] = None
+        self.calibration_metadata: Dict[str, Any] = {} # Metadata for calibrated columns
+        self.sanitization_log: List[str] = [] # Track ingestion actions (PRD 005)
 
-    def load_file(self, filepath):
+    def load_file(self, filepath: str) -> Tuple[bool, str]:
         """
         Reads .csv and tab-delimited .dat files into a pandas DataFrame.
-        Applies dynamic sanitization and ensures complete-case analysis.
-        Returns a tuple (success: bool, message: str)
+        Applies dynamic sanitization and logs all actions for transparency.
+        
+        Args:
+            filepath: Path to the data file.
+
+        Returns:
+            A tuple of (success, message).
         """
         if not os.path.exists(filepath):
             return False, f"Error: File '{filepath}' does not exist."
 
+        self.sanitization_log = [] # Reset log for new load
         _, ext = os.path.splitext(filepath)
+        
         try:
             if ext.lower() == '.csv':
                 df = pd.read_csv(filepath)
@@ -31,18 +44,23 @@ class QCADataModel:
                 return False, f"Error: Unsupported file extension '{ext}'."
             
             initial_rows = len(df)
+            initial_cols = list(df.columns)
             
-            # 1. Clean column names (spaces -> _, remove non-alphanumeric)
+            # 1. Clean column names (PRD 005)
             new_columns = []
             for col in df.columns:
                 clean_name = str(col).replace(' ', '_')
                 clean_name = re.sub(r'[^a-zA-Z0-9_]', '', clean_name)
+                
+                if clean_name != str(col):
+                    self.sanitization_log.append(
+                        f"Renamed variable '{col}' to '{clean_name}'. "
+                        f"Reason: Alphanumeric enforcement for Boolean compatibility."
+                    )
                 new_columns.append(clean_name)
             df.columns = new_columns
             
             # 2. Dynamic numeric conversion
-            # Iterate through all columns. If conversion to numeric preserves > 50% of 
-            # original non-null values, replace with numeric version. Otherwise leave as is.
             for col in df.columns:
                 orig_count = df[col].count()
                 if orig_count == 0:
@@ -51,30 +69,66 @@ class QCADataModel:
                 temp_numeric = pd.to_numeric(df[col], errors='coerce')
                 new_count = temp_numeric.count()
                 
+                # If conversion is mostly successful, apply it
                 if (new_count / orig_count) > 0.5:
+                    if df[col].dtype != temp_numeric.dtype:
+                        self.sanitization_log.append(
+                            f"Converted variable '{col}' to numeric. "
+                            f"Reason: Column contains mostly numerical data."
+                        )
                     df[col] = temp_numeric
+                
+                # Check for missing values in numeric columns
+                null_count = df[col].isna().sum()
+                if null_count > 0:
+                    self.sanitization_log.append(
+                        f"Found {null_count} missing value(s) in '{col}'. "
+                        f"Reason: Standardization to NaN for complete-case analysis."
+                    )
             
-            # 3. Complete-case analysis (drop rows with any NaNs in the final dataframe)
+            # 3. Complete-case analysis
             df.dropna(inplace=True)
             self.dataframe = df
-            self._full_dataframe = None # Reset filtering state
+            self._full_dataframe = None 
             
             final_rows = len(self.dataframe)
             dropped_rows = initial_rows - final_rows
             
-            success_msg = f"Successfully loaded {filepath}. Total cases: {final_rows}."
             if dropped_rows > 0:
-                success_msg += f" (Note: {dropped_rows} rows were dropped due to missing or invalid data)."
+                self.sanitization_log.append(
+                    f"Dropped {dropped_rows} row(s) from the dataset. "
+                    f"Reason: Complete-case analysis (rows contained missing/invalid data)."
+                )
             
+            # 4. Load Metadata (PRD 004 Persistence)
+            self.calibration_metadata = {}
+            meta_path = filepath + ".meta.json"
+            if os.path.exists(meta_path):
+                try:
+                    with open(meta_path, 'r', encoding='utf-8') as f:
+                        self.calibration_metadata = json.load(f)
+                    self.sanitization_log.append(
+                        f"Loaded calibration metadata for {len(self.calibration_metadata)} variables. "
+                        f"Reason: Restoring theoretical context and anchors."
+                    )
+                except Exception as e:
+                    print(f"Warning: Could not load metadata: {e}")
+
+            success_msg = f"Successfully loaded {filepath}. Total cases: {final_rows}."
             return True, success_msg
         except Exception as e:
             return False, f"Error loading file: {str(e)}"
 
-    def save_file(self, dataframe, filepath):
+    def save_file(self, dataframe: pd.DataFrame, filepath: str) -> Tuple[bool, str]:
         """
-        Saves a pandas DataFrame to a file. 
-        Supports .csv and .dat (tab-delimited).
-        Returns a tuple (success: bool, message: str)
+        Saves a pandas DataFrame to a file and persists calibration metadata.
+        
+        Args:
+            dataframe: The DataFrame to save.
+            filepath: Target file path.
+
+        Returns:
+            A tuple of (success, message).
         """
         _, ext = os.path.splitext(filepath)
         try:
@@ -85,13 +139,23 @@ class QCADataModel:
             else:
                 return False, f"Error: Unsupported file extension '{ext}' for saving."
             
+            # Save Metadata (PRD 004 Persistence)
+            if self.calibration_metadata:
+                meta_path = filepath + ".meta.json"
+                try:
+                    with open(meta_path, 'w', encoding='utf-8') as f:
+                        json.dump(self.calibration_metadata, f, indent=4)
+                except Exception as e:
+                    return True, f"Data saved, but metadata failed: {e}"
+            
             return True, f"Successfully saved to {filepath}"
         except Exception as e:
             return False, f"Error saving file: {str(e)}"
 
-    def calibrate_variable(self, source_col, new_col, p_full, p_cross, p_non):
+    def calibrate_variable(self, source_col, new_col, p_full, p_cross, p_non, rationale=""):
         """
         Calculates fuzzy membership scores using the fsQCA log-odds method.
+        Stores calibration metadata for transparency.
         """
         if self.dataframe is None:
             return False, "Error: No data loaded."
@@ -121,6 +185,13 @@ class QCADataModel:
             
             # 4. Apply logistic function
             self.dataframe[new_col] = 1 / (1 + np.exp(-log_odds))
+            
+            # 5. Store metadata (PRD 004)
+            self.calibration_metadata[new_col] = {
+                'source': source_col,
+                'anchors': {'full': p_full, 'cross': p_cross, 'non': p_non},
+                'rationale': rationale
+            }
             
             return True, f"Successfully calibrated '{source_col}' into '{new_col}'"
         except Exception as e:
@@ -323,7 +394,9 @@ class QCADataModel:
             thresholds = self.auto_calculate_thresholds(col)
             if thresholds:
                 p_full, p_cross, p_non = thresholds
-                success, _ = self.calibrate_variable(col, f"f_{col}", p_full, p_cross, p_non)
+                # Use a standard rationale for batch calibration
+                rationale = f"Automated calibration using sample percentiles: Full={p_full:.3f} (95th), Cross={p_cross:.3f} (50th), Non={p_non:.3f} (5th)."
+                success, _ = self.calibrate_variable(col, f"f_{col}", p_full, p_cross, p_non, rationale=rationale)
                 if success:
                     count += 1
                     
@@ -507,10 +580,20 @@ class QCADataModel:
             "term_metrics": term_metrics
         }
 
-    def calculate_necessary_conditions(self, conditions, outcome, negate_outcome=False):
+    def calculate_necessary_conditions(self, conditions: List[str], outcome: str, negate_outcome: bool = False) -> Optional[pd.DataFrame]:
         """
-        Calculates necessity consistency and coverage for each condition expression.
-        Supports fuzzy OR via '+' (e.g. 'A + B') and negation via '~'.
+        Calculates necessity consistency, coverage, and relevance for each condition expression.
+        
+        Supports fuzzy OR via '+' (e.g., 'A + B') and negation via '~'.
+        Includes Relevance of Necessity (RoN) and Triviality auditing (PRD 006).
+
+        Args:
+            conditions: List of condition expressions to test.
+            outcome: The target outcome variable.
+            negate_outcome: Whether to test for the absence of the outcome.
+
+        Returns:
+            A pandas DataFrame with results, or None if calculation is impossible.
         """
         if self.dataframe is None:
             return None
@@ -545,15 +628,28 @@ class QCADataModel:
             # Combine terms using fuzzy OR (MAX)
             cond_data = np.maximum.reduce(term_arrays)
             
-            # Calculate metrics
+            # 1. Consistency: sum(min(X, Y)) / sum(Y)
             consist = np.sum(np.minimum(cond_data, outcome_data)) / sum_outcome
+            
+            # 2. Coverage (Standard): sum(min(X, Y)) / sum(X)
             sum_cond = np.sum(cond_data)
             cover = np.sum(np.minimum(cond_data, outcome_data)) / sum_cond if sum_cond > 0 else 0.0
+            
+            # 3. Relevance of Necessity (RoN): sum(min(1-X, 1-Y)) / sum(1-X)
+            # This measure detects triviality (conditions that are present everywhere)
+            sum_not_cond = np.sum(1 - cond_data)
+            ron = np.sum(np.minimum(1 - cond_data, 1 - outcome_data)) / sum_not_cond if sum_not_cond > 0 else 0.0
+            
+            # 4. Triviality Proxy (Avg Membership)
+            # High avg membership (> 0.8) often flags potentially trivial conditions
+            triviality = np.mean(cond_data)
             
             results.append({
                 'Condition': expr,
                 'Consistency': consist,
-                'Coverage': cover
+                'Coverage': cover,
+                'RoN': ron,
+                'Triviality': triviality
             })
             
         df_res = pd.DataFrame(results)

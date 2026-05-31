@@ -44,3 +44,16 @@ desktop.ini
 # Environment & Secrets
 .env
 .venv
+
+# Documentation
+docs/prds/
+docs/ragin_feature_backlog.md
+
+# Data & Literature
+*.csv
+*.xlsx
+*.dat
+*.meta.json
+*.sqlite3
+*.db
+chunked_literature/

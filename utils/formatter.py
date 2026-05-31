@@ -2,10 +2,30 @@ import pandas as pd
 
 class ResultFormatter:
     @staticmethod
-    def format_subset(df):
+    def format_subset(df: pd.DataFrame) -> str:
         """Formats Subset/Superset analysis results into a clean string table."""
         if df is None or df.empty:
             return "No subset analysis results to display."
+        return df.to_string(index=False)
+
+    @staticmethod
+    def format_necessity(df: pd.DataFrame) -> str:
+        """
+        Formats Necessary Conditions analysis results into a clean string table,
+        including auditing metrics for relevance and triviality.
+        """
+        if df is None or df.empty:
+            return "No necessary condition analysis results to display."
+        
+        # Select and order columns for the text report
+        cols = ['Condition', 'Consistency', 'Coverage', 'RoN', 'Triviality']
+        if all(c in df.columns for c in cols):
+            return df[cols].to_string(index=False, formatters={
+                'Consistency': '{:.4f}'.format,
+                'Coverage': '{:.4f}'.format,
+                'RoN': '{:.4f}'.format,
+                'Triviality': '{:.4f}'.format
+            })
         return df.to_string(index=False)
 
     @staticmethod

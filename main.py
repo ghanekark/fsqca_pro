@@ -1,5 +1,7 @@
 import os
 import sys
+import logging
+from typing import List, Dict, Any, Tuple, Optional, Callable
 import numpy as np
 import pandas as pd
 from PyQt6.QtWidgets import QApplication, QFileDialog, QMessageBox, QInputDialog, QProgressDialog, QDialog, QVBoxLayout, QTableWidget, QTableWidgetItem, QDialogButtonBox
@@ -18,19 +20,28 @@ from views.subset_dialog import SubsetDialog
 from views.descriptives_dialog import DescriptivesDialog
 from views.coincidence_dialog import CoincidenceDialog
 from views.select_if_dialog import SelectIfDialog
+from views.sanitization_report_dialog import SanitizationReportDialog
 from models.data_model import QCADataModel
+from controllers.theme_controller import ThemeController
 from utils.worker import AnalysisWorker
 from utils.formatter import ResultFormatter
 
 class AppController:
-    def __init__(self):
+    def __init__(self) -> None:
         # Enable High-DPI scaling before creating QApplication
         os.environ["QT_ENABLE_HIGHDPI_SCALING"] = "1"
         self.app = QApplication(sys.argv)
         
         self.model = QCADataModel()
+        self.theme_controller = ThemeController()
+        
         self.view = MainWindow()
         self.view.setMinimumSize(800, 600)
+        
+        # Apply initial theme
+        current_theme = self.theme_controller.get_current_theme()
+        self.theme_controller.apply_theme(current_theme)
+        self.view.action_view_dark_mode.setChecked(current_theme == "dark")
         
         self.current_tt_df = None
         self.current_conditions = None
@@ -76,6 +87,9 @@ class AppController:
         # --- Graphs Menu ---
         self.view.action_graphs_xy.triggered.connect(self._not_implemented)
 
+        # --- View Menu ---
+        self.view.action_view_dark_mode.triggered.connect(self.theme_controller.toggle_theme)
+
     def _not_implemented(self):
         QMessageBox.information(self.view, "Coming Soon", "This feature is on the roadmap but not yet implemented.")
 
@@ -97,7 +111,7 @@ class AppController:
         success, message = self.model.new_dataset()
         if success:
             self._reset_analysis_state()
-            self.view.populate_grid(self.model.dataframe)
+            self.view.populate_grid(self.model.dataframe, self.model.calibration_metadata)
             QMessageBox.information(self.view, "Success", message)
 
     def new_from_expression(self):
@@ -119,7 +133,7 @@ class AppController:
             success, message = self.model.new_from_expression(text)
             if success:
                 self._reset_analysis_state()
-                self.view.populate_grid(self.model.dataframe)
+                self.view.populate_grid(self.model.dataframe, self.model.calibration_metadata)
                 QMessageBox.information(self.view, "Success", message)
 
     def add_variable(self):
@@ -131,7 +145,7 @@ class AppController:
         if ok and text:
             success, message = self.model.add_variable(text)
             if success:
-                self.view.populate_grid(self.model.dataframe)
+                self.view.populate_grid(self.model.dataframe, self.model.calibration_metadata)
                 QMessageBox.information(self.view, "Success", message)
             else:
                 QMessageBox.warning(self.view, "Warning", message)
@@ -152,7 +166,7 @@ class AppController:
             )
             if reply == QMessageBox.StandardButton.Yes:
                 if self.model.delete_variable(var_name):
-                    self.view.populate_grid(self.model.dataframe)
+                    self.view.populate_grid(self.model.dataframe, self.model.calibration_metadata)
                     self._reset_analysis_state()
 
     def add_case(self):
@@ -162,7 +176,7 @@ class AppController:
             self.model.dataframe = pd.DataFrame(columns=['ID'])
             
         if self.model.add_case():
-            self.view.populate_grid(self.model.dataframe)
+            self.view.populate_grid(self.model.dataframe, self.model.calibration_metadata)
         else:
             QMessageBox.warning(self.view, "Warning", "Cannot add a case to an empty variable set. Please add variables first.")
 
@@ -184,7 +198,7 @@ class AppController:
         
         if reply == QMessageBox.StandardButton.Yes:
             if self.model.delete_case(row_idx):
-                self.view.populate_grid(self.model.dataframe)
+                self.view.populate_grid(self.model.dataframe, self.model.calibration_metadata)
                 self._reset_analysis_state()
 
     def open_file(self):
@@ -198,9 +212,15 @@ class AppController:
         if filepath:
             success, message = self.model.load_file(filepath)
             if success:
-                self.view.populate_grid(self.model.dataframe)
+                self.view.populate_grid(self.model.dataframe, self.model.calibration_metadata)
                 self._reset_analysis_state()
-                QMessageBox.information(self.view, "Success", message)
+                
+                # Show Sanitization Report (PRD 005)
+                if self.model.sanitization_log:
+                    report_dialog = SanitizationReportDialog(self.view, self.model.sanitization_log)
+                    report_dialog.exec()
+                else:
+                    QMessageBox.information(self.view, "Success", message)
             else:
                 QMessageBox.critical(self.view, "Error", message)
 
@@ -290,7 +310,7 @@ class AppController:
             
             success, message = self.model.apply_recode(source, target, rules)
             if success:
-                self.view.populate_grid(self.model.dataframe)
+                self.view.populate_grid(self.model.dataframe, self.model.calibration_metadata)
                 self._reset_analysis_state()
                 QMessageBox.information(self.view, "Success", message)
             else:
@@ -299,7 +319,7 @@ class AppController:
     def _perform_compute(self, target_col, expression):
         success, message = self.model.compute_variable(target_col, expression)
         if success:
-            self.view.populate_grid(self.model.dataframe)
+            self.view.populate_grid(self.model.dataframe, self.model.calibration_metadata)
             self._reset_analysis_state()
             QMessageBox.information(self.view, "Success", message)
         else:
@@ -311,25 +331,59 @@ class AppController:
             return
             
         cols = list(self.model.dataframe.columns)
-        dialog = CalibrationDialog(self.view, cols, self._perform_calibration, 
-                                   self.model.auto_calculate_thresholds, self._perform_batch_calibration)
+        # get_data_callback is needed for plotting
+        def get_data(col):
+            if self.model.dataframe is not None and col in self.model.dataframe.columns:
+                return self.model.dataframe[col].values
+            return None
+
+        dialog = CalibrationDialog(
+            self.view, 
+            cols, 
+            get_data,
+            self._perform_calibration, 
+            self.model.auto_calculate_thresholds,
+            self._perform_batch_calibration
+        )
         dialog.exec()
 
-    def _perform_calibration(self, source_col, new_col, p_full, p_cross, p_non):
+    def _perform_calibration(self, source_col, new_col, p_full, p_cross, p_non, rationale=""):
         success, message = self.model.calibrate_variable(source_col, new_col, p_full, p_cross, p_non)
+        # For now, we ignore the rationale or just log it to console
         if success:
-            self.view.populate_grid(self.model.dataframe)
-            self._reset_analysis_state() # Calibration might affect TT
+            print(f"Calibration Rationale for {new_col}: {rationale}")
+            self.view.populate_grid(self.model.dataframe, self.model.calibration_metadata)
+            self._reset_analysis_state() 
             QMessageBox.information(self.view, "Success", message)
         else:
             QMessageBox.critical(self.view, "Error", message)
 
-    def _perform_batch_calibration(self):
-        success, message = self.model.auto_calibrate_all()
+    def _perform_batch_calibration(self) -> None:
+        """
+        Executes automated calibration for all numeric columns in a background thread.
+        Maintains scientific transparency by logging rationales for each variable.
+        """
+        self.progress_dialog = QProgressDialog("Calibrating all numeric variables...", None, 0, 0, self.view)
+        self.progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
+        self.progress_dialog.setMinimumDuration(0)
+        self.progress_dialog.show()
+
+        def run_batch_math() -> Tuple[bool, str]:
+            return self.model.auto_calibrate_all()
+
+        self.batch_worker = AnalysisWorker(run_batch_math)
+        self.batch_worker.finished_signal.connect(self._on_batch_finished)
+        self.batch_worker.error_signal.connect(self._on_analysis_error)
+        self.batch_worker.start()
+
+    def _on_batch_finished(self, result: Tuple[bool, str]) -> None:
+        """Handles the completion of the batch calibration process."""
+        self.progress_dialog.close()
+        success, message = result
         if success:
-            self.view.populate_grid(self.model.dataframe)
+            self.view.populate_grid(self.model.dataframe, self.model.calibration_metadata)
             self._reset_analysis_state()
-            QMessageBox.information(self.view, "Batch Calibration", message)
+            QMessageBox.information(self.view, "Batch Calibration Complete", message)
         else:
             QMessageBox.critical(self.view, "Error", message)
 
@@ -478,8 +532,34 @@ class AppController:
             return
             
         cols = list(self.model.dataframe.columns)
-        dialog = NecessityDialog(self.view, cols, self.model.calculate_necessary_conditions)
-        dialog.exec()
+        self.necessity_dialog = NecessityDialog(self.view, cols)
+        self.necessity_dialog.analyze_requested.connect(self._perform_necessity_analysis)
+        self.necessity_dialog.show()
+
+    def _perform_necessity_analysis(self, conditions, outcome, negate_outcome):
+        self.progress_dialog = QProgressDialog("Analyzing Necessary Conditions...", None, 0, 0, self.view)
+        self.progress_dialog.setWindowModality(Qt.WindowModality.WindowModal)
+        self.progress_dialog.setMinimumDuration(0)
+        self.progress_dialog.show()
+
+        def run_necessity_math():
+            return self.model.calculate_necessary_conditions(conditions, outcome, negate_outcome)
+
+        self.necessity_worker = AnalysisWorker(run_necessity_math)
+        self.necessity_worker.finished_signal.connect(self._on_necessity_finished)
+        self.necessity_worker.error_signal.connect(self._on_analysis_error)
+        self.necessity_worker.start()
+
+    def _on_necessity_finished(self, df_results):
+        self.progress_dialog.close()
+        if df_results is not None:
+            # 1. Append to Log
+            text_report = ResultFormatter.format_necessity(df_results)
+            self.append_to_log("NECESSARY CONDITIONS ANALYSIS", text_report)
+            
+            # 2. Update the open dialog
+            if hasattr(self, 'necessity_dialog') and self.necessity_dialog.isVisible():
+                self.necessity_dialog.display_results(df_results)
 
     def open_subset_dialog(self):
         if self.model.dataframe is None:
@@ -623,7 +703,7 @@ class AppController:
                 
             success, message = self.model.select_if(condition)
             if success:
-                self.view.populate_grid(self.model.dataframe)
+                self.view.populate_grid(self.model.dataframe, self.model.calibration_metadata)
                 self._reset_analysis_state()
                 QMessageBox.information(self.view, "Success", message)
             else:
@@ -632,7 +712,7 @@ class AppController:
     def cancel_selection(self):
         success, message = self.model.cancel_selection()
         if success:
-            self.view.populate_grid(self.model.dataframe)
+            self.view.populate_grid(self.model.dataframe, self.model.calibration_metadata)
             self._reset_analysis_state()
             QMessageBox.information(self.view, "Success", message)
         else:

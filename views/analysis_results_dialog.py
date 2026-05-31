@@ -1,6 +1,7 @@
 from PyQt6.QtWidgets import QDialog, QVBoxLayout, QTextEdit, QPushButton, QHBoxLayout, QLabel, QFileDialog, QMessageBox
 from PyQt6.QtGui import QFont
 from views.visual_boolean_dialog import VisualBooleanDialog
+from views.solution_continuum_dialog import SolutionContinuumDialog
 
 class AnalysisResultsDialog(QDialog):
     def __init__(self, parent, results):
@@ -31,6 +32,11 @@ class AnalysisResultsDialog(QDialog):
         self.visualize_btn.clicked.connect(self._handle_visualize)
         btn_layout.addWidget(self.visualize_btn)
         
+        self.continuum_btn = QPushButton("View Solution Continuum")
+        self.continuum_btn.clicked.connect(self._handle_continuum)
+        self.continuum_btn.setStyleSheet("font-weight: bold; color: #1a237e;")
+        btn_layout.addWidget(self.continuum_btn)
+        
         btn_layout.addStretch()
 
         self.save_btn = QPushButton("Save Report As...")
@@ -57,6 +63,11 @@ class AnalysisResultsDialog(QDialog):
     def _handle_visualize(self):
         conditions = self.results.get("conditions", [])
         dialog = VisualBooleanDialog(self, self.results, conditions)
+        dialog.exec()
+
+    def _handle_continuum(self):
+        conditions = self.results.get("conditions", [])
+        dialog = SolutionContinuumDialog(self, self.results, conditions)
         dialog.exec()
 
     def _get_path_string(self, term, conditions):
