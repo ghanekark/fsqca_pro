@@ -1,4 +1,5 @@
 import os
+import logging
 from string import Template
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import QObject, QSettings, pyqtSignal
@@ -68,4 +69,3 @@ class ThemeController(QObject):
         current = self.get_current_theme()
         new_theme = "dark" if current == "light" else "light"
         self.apply_theme(new_theme)
-theme)
