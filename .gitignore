@@ -1,12 +1,46 @@
+# Virtual Environments
+venv_release/
 qca_env/
+venv/
+.venv/
+env/
+ENV/
+
+# Build & Distribution
 build/
 dist/
+*.spec
+*.egg-info/
+*.egg
 
+# Python Bytecode & Cache
 __pycache__/
 *.pyc
 *.pyo
+*.pyw
+.pytest_cache/
+.mypy_cache/
 
+# Coverage & Reports
+.coverage
+htmlcov/
+nosetests.xml
+coverage.xml
+
+# Logs
+*.log
+
+# OS-Specific
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDEs & Editors
 .vscode/
 .idea/
+*.swp
+*.swo
 
+# Environment & Secrets
 .env
+.venv
