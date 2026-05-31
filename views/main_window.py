@@ -1,11 +1,12 @@
-import sys
-from PyQt6.QtWidgets import QMainWindow, QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget
-from PyQt6.QtGui import QAction
+from PyQt6.QtWidgets import (QMainWindow, QTableWidget, QTableWidgetItem, 
+                             QVBoxLayout, QWidget, QSplitter, QTextEdit)
+from PyQt6.QtGui import QAction, QFont
+from PyQt6.QtCore import Qt
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("PyQCA - Qualitative Comparative Analysis")
+        self.setWindowTitle("fsqca_pro")
         self.resize(1024, 768)
         
         self._setup_menu()
@@ -14,54 +15,121 @@ class MainWindow(QMainWindow):
     def _setup_menu(self):
         menubar = self.menuBar()
         
-        # File Menu
-        self.file_menu = menubar.addMenu("File")
+        # --- File Menu ---
+        self.file_menu = menubar.addMenu("&File")
         
-        self.action_open = QAction("Open Data...", self)
-        self.file_menu.addAction(self.action_open)
+        self.action_file_new = QAction("New", self)
+        self.file_menu.addAction(self.action_file_new)
         
-        self.action_save = QAction("Save Data As...", self)
-        self.file_menu.addAction(self.action_save)
+        self.action_file_new_expr = QAction("New from Expression...", self)
+        self.file_menu.addAction(self.action_file_new_expr)
+        
+        self.action_file_open = QAction("Open...", self)
+        self.file_menu.addAction(self.action_file_open)
+        
+        self.action_file_save = QAction("Save", self)
+        self.file_menu.addAction(self.action_file_save)
+        
+        self.action_file_save_as = QAction("Save As...", self)
+        self.file_menu.addAction(self.action_file_save_as)
         
         self.file_menu.addSeparator()
         
-        self.action_exit = QAction("Exit", self)
-        self.file_menu.addAction(self.action_exit)
+        self.action_file_print_res = QAction("Print Results...", self)
+        self.file_menu.addAction(self.action_file_print_res)
         
-        # Edit Menu
-        self.edit_menu = menubar.addMenu("Edit")
+        self.action_file_save_res = QAction("Save Results...", self)
+        self.file_menu.addAction(self.action_file_save_res)
         
-        # Variables Menu
-        self.variables_menu = menubar.addMenu("Variables")
+        self.file_menu.addSeparator()
         
-        self.action_compute = QAction("Compute Variable...", self)
-        self.variables_menu.addAction(self.action_compute)
+        self.action_file_quit = QAction("Quit", self)
+        self.file_menu.addAction(self.action_file_quit)
         
-        # Analyze Menu
-        self.analyze_menu = menubar.addMenu("Analyze")
+        # --- Variables Menu ---
+        self.vars_menu = menubar.addMenu("&Variables")
         
-        self.action_calibrate = QAction("Calibrate...", self)
-        self.analyze_menu.addAction(self.action_calibrate)
+        self.action_vars_add = QAction("Add", self)
+        self.vars_menu.addAction(self.action_vars_add)
         
-        self.action_truth_table = QAction("Truth Table Algorithm...", self)
-        self.analyze_menu.addAction(self.action_truth_table)
+        self.action_vars_delete = QAction("Delete", self)
+        self.vars_menu.addAction(self.action_vars_delete)
         
-        self.action_necessity = QAction("Necessary Conditions...", self)
-        self.analyze_menu.addAction(self.action_necessity)
+        self.action_vars_compute = QAction("Compute...", self)
+        self.vars_menu.addAction(self.action_vars_compute)
         
-        self.action_standard_analysis = QAction("Standard Analysis...", self)
-        self.analyze_menu.addAction(self.action_standard_analysis)
+        self.action_vars_recode = QAction("Recode...", self)
+        self.vars_menu.addAction(self.action_vars_recode)
 
-        self.action_sensitivity = QAction("Sensitivity Analysis...", self)
-        self.analyze_menu.addAction(self.action_sensitivity)
+        self.action_vars_calibrate = QAction("Calibration...", self)
+        self.vars_menu.addAction(self.action_vars_calibrate)
+        
+        # --- Cases Menu ---
+        self.cases_menu = menubar.addMenu("&Cases")
+        
+        self.action_cases_add = QAction("Add", self)
+        self.cases_menu.addAction(self.action_cases_add)
+        
+        self.action_cases_delete = QAction("Delete", self)
+        self.cases_menu.addAction(self.action_cases_delete)
+        
+        self.action_cases_select_if = QAction("Select If...", self)
+        self.cases_menu.addAction(self.action_cases_select_if)
+        
+        self.action_cases_cancel_sel = QAction("Cancel Selection", self)
+        self.cases_menu.addAction(self.action_cases_cancel_sel)
+        
+        # --- Analyze Menu ---
+        self.analyze_menu = menubar.addMenu("&Analyze")
+        
+        self.action_analyze_tt = QAction("Truth Table Algorithm...", self)
+        self.analyze_menu.addAction(self.action_analyze_tt)
+        
+        self.action_analyze_induction = QAction("Analytic Induction...", self)
+        self.analyze_menu.addAction(self.action_analyze_induction)
+        
+        self.action_analyze_necessity = QAction("Necessary Conditions...", self)
+        self.analyze_menu.addAction(self.action_analyze_necessity)
+        
+        self.action_analyze_coincidence = QAction("Set Coincidence...", self)
+        self.analyze_menu.addAction(self.action_analyze_coincidence)
+        
+        self.action_analyze_subset = QAction("Subset/Superset Analysis...", self)
+        self.analyze_menu.addAction(self.action_analyze_subset)
+
+        self.action_analyze_sensitivity = QAction("Sensitivity Analysis...", self)
+        self.analyze_menu.addAction(self.action_analyze_sensitivity)
+        
+        # Statistics Sub-menu
+        self.stats_menu = self.analyze_menu.addMenu("Statistics")
+        self.action_stats_descriptives = QAction("Descriptives...", self)
+        self.stats_menu.addAction(self.action_stats_descriptives)
+        
+        # --- Graphs Menu ---
+        self.graphs_menu = menubar.addMenu("&Graphs")
+        
+        self.action_graphs_xy = QAction("XY Plot...", self)
+        self.graphs_menu.addAction(self.action_graphs_xy)
 
     def _setup_ui(self):
-        self.central_widget = QWidget()
-        self.setCentralWidget(self.central_widget)
-        layout = QVBoxLayout(self.central_widget)
+        self.splitter = QSplitter(Qt.Orientation.Vertical)
+        self.setCentralWidget(self.splitter)
         
+        # Top half: Data Grid
         self.table = QTableWidget()
-        layout.addWidget(self.table)
+        self.splitter.addWidget(self.table)
+        
+        # Bottom half: Results Log
+        self.log_console = QTextEdit()
+        self.log_console.setReadOnly(True)
+        # Use a monospace font for better alignment of results
+        mono_font = QFont("Courier New", 10)
+        mono_font.setStyleHint(QFont.StyleHint.Monospace)
+        self.log_console.setFont(mono_font)
+        self.splitter.addWidget(self.log_console)
+        
+        # Initial sizes: prioritize the table
+        self.splitter.setSizes([500, 250])
 
     def populate_grid(self, dataframe):
         """

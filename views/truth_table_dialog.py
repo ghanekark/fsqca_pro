@@ -2,7 +2,9 @@ from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel,
                              QListWidget, QAbstractItemView, QComboBox, 
                              QPushButton, QTableWidget, QTableWidgetItem, 
                              QMessageBox, QGroupBox, QMenuBar,
-                             QDialogButtonBox, QSpinBox, QDoubleSpinBox)
+                             QDialogButtonBox, QSpinBox, QDoubleSpinBox,
+                             QRadioButton, QButtonGroup, QGridLayout,
+                             QCheckBox, QScrollArea, QWidget)
 from PyQt6.QtGui import QAction, QKeySequence
 import numpy as np
 
@@ -32,6 +34,10 @@ class VariableSelectionDialog(QDialog):
         self.outcome_combo.addItems(self.column_names)
         layout.addWidget(self.outcome_combo)
 
+        # Negate Outcome Checkbox
+        self.negate_checkbox = QCheckBox("Negate Outcome (~)")
+        layout.addWidget(self.negate_checkbox)
+
         # Generate Button
         self.gen_btn = QPushButton("Generate Truth Table")
         self.gen_btn.clicked.connect(self._handle_generate)
@@ -41,16 +47,17 @@ class VariableSelectionDialog(QDialog):
         selected_items = self.cond_listbox.selectedItems()
         conditions = [item.text() for item in selected_items]
         outcome = self.outcome_combo.currentText()
+        negate_outcome = self.negate_checkbox.isChecked()
 
         if not conditions or not outcome:
             QMessageBox.warning(self, "Warning", "Please select conditions and an outcome.")
             return
 
-        self.on_generate(conditions, outcome)
+        self.on_generate(conditions, outcome, negate_outcome)
         self.accept()
 
 class EditTruthTableDialog(QDialog):
-    def __init__(self, parent, df, model, on_standard_analysis, delete_code_callback):
+    def __init__(self, parent, df, model, on_standard_analysis, delete_code_callback, specify_analysis_callback):
         super().__init__(parent)
         self.setWindowTitle("Edit Truth Table & Run Analysis")
         self.resize(1100, 700)
@@ -58,6 +65,7 @@ class EditTruthTableDialog(QDialog):
         self.model = model
         self.on_standard_analysis = on_standard_analysis
         self.delete_code_callback = delete_code_callback
+        self.specify_analysis_callback = specify_analysis_callback
         
         self._setup_ui()
         self.refresh_grid(df)
@@ -113,9 +121,14 @@ class EditTruthTableDialog(QDialog):
         
         toolbar_layout.addWidget(edit_group)
 
+        # Specify Analysis Button
+        self.specify_btn = QPushButton("Specify Analysis")
+        self.specify_btn.clicked.connect(self.specify_analysis_callback)
+        toolbar_layout.addWidget(self.specify_btn)
+
         # Analysis Button
         self.analysis_btn = QPushButton("Standard Analyses")
-        self.analysis_btn.setStyleSheet("font-weight: bold; padding: 10px; background-color: #e8f5e9;")
+        self.analysis_btn.setStyleSheet("font-weight: bold; padding: 10px; background-color: #e8f5e9; color: black;")
         self.analysis_btn.clicked.connect(self.on_standard_analysis)
         toolbar_layout.addWidget(self.analysis_btn)
 
@@ -219,3 +232,143 @@ class DeleteAndCodeDialog(QDialog):
 
     def get_consistency(self):
         return self.consist_spin.value()
+
+class SpecifyAnalysisDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Specify Analysis")
+        self.setMinimumWidth(450)
+        
+        self.groups = {}
+        self._setup_ui()
+
+    def _setup_ui(self):
+        layout = QVBoxLayout(self)
+        
+        instruction = QLabel("Specify how each type of truth table configuration should be treated in the analysis:")
+        instruction.setWordWrap(True)
+        layout.addWidget(instruction)
+        
+        grid = QGridLayout()
+        layout.addLayout(grid)
+        
+        # Mapping for display labels to internal keys and default values
+        self.categories = [
+            ("Positive Cases (1)", "1", "True"),
+            ("Negative Cases (0)", "0", "False"),
+            ("Don't Care Cases (-)", "-", "False"),
+            ("Remainders", "rem", "False")
+        ]
+        
+        options = ["True", "False", "Don't Cares"]
+        
+        # Add Header
+        for i, opt in enumerate(options):
+            grid.addWidget(QLabel(f"<b>{opt}</b>"), 0, i + 1)
+
+        for row_idx, (cat_label, cat_key, default) in enumerate(self.categories, start=1):
+            grid.addWidget(QLabel(cat_label), row_idx, 0)
+            
+            bg = QButtonGroup(self)
+            self.groups[cat_key] = bg
+            
+            for col_idx, opt in enumerate(options, start=1):
+                rb = QRadioButton()
+                bg.addButton(rb)
+                grid.addWidget(rb, row_idx, col_idx)
+                
+                if opt == default:
+                    rb.setChecked(True)
+                
+                # Store the option string in the button's property
+                rb.setProperty("option", opt)
+
+        # Buttons
+        self.button_box = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
+        self.button_box.accepted.connect(self.accept)
+        self.button_box.rejected.connect(self.reject)
+        layout.addWidget(self.button_box)
+
+    def get_configuration(self):
+        """
+        Returns a dictionary mapping '1', '0', '-', and 'rem' 
+        to 'True', 'False', or 'Don't Cares'.
+        """
+        config = {}
+        for cat_key, bg in self.groups.items():
+            checked_button = bg.checkedButton()
+            if checked_button:
+                config[cat_key] = checked_button.property("option")
+        return config
+
+class PrimeImplicantChartDialog(QDialog):
+    def __init__(self, parent, tied_pis, conditions):
+        super().__init__(parent)
+        self.setWindowTitle("Prime Implicant Chart")
+        self.setMinimumSize(450, 400)
+        self.tied_pis = tied_pis
+        self.conditions = conditions
+        self.checkbox_mapping = {}
+        
+        self._setup_ui()
+
+    def _setup_ui(self):
+        layout = QVBoxLayout(self)
+        
+        label = QLabel("Some prime implicants are tied. Use the checkboxes to select which prime implicants to keep.")
+        label.setWordWrap(True)
+        layout.addWidget(label)
+        
+        # Scroll Area for checkboxes
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll_content = QWidget()
+        self.scroll_layout = QVBoxLayout(scroll_content)
+        
+        for pi in self.tied_pis:
+            # Build a readable label: 1 -> A, 0 -> ~A, - -> skip
+            parts = []
+            for i, char in enumerate(pi):
+                if char == '1':
+                    parts.append(self.conditions[i])
+                elif char == '0':
+                    parts.append(f"~{self.conditions[i]}")
+            
+            readable_label = " ".join(parts) if parts else "Empty set (1)"
+            
+            cb = QCheckBox(readable_label)
+            cb.setChecked(True) # Default to all selected
+            self.checkbox_mapping[cb] = pi
+            self.scroll_layout.addWidget(cb)
+        
+        self.scroll_layout.addStretch()
+        scroll.setWidget(scroll_content)
+        layout.addWidget(scroll)
+        
+        # Select All Button
+        self.select_all_btn = QPushButton("Select All")
+        self.select_all_btn.clicked.connect(self._on_select_all)
+        layout.addWidget(self.select_all_btn)
+        
+        # Buttons
+        self.buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
+        self.buttons.accepted.connect(self.accept)
+        self.buttons.rejected.connect(self.reject)
+        layout.addWidget(self.buttons)
+
+    def _on_select_all(self):
+        for cb in self.checkbox_mapping.keys():
+            cb.setChecked(True)
+
+    def get_selected(self):
+        """Returns a list of raw bitstrings for the checked boxes."""
+        selected = [raw_pi for cb, raw_pi in self.checkbox_mapping.items() if cb.isChecked()]
+        # Failsafe: if nothing is selected or canceled, return everything
+        if not selected:
+            return self.tied_pis
+        return selected
+

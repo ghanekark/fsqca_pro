@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QDialog, QVBoxLayout, QFormLayout, QComboBox, QLineEdit, QPushButton, QMessageBox, QHBoxLayout, QLabel
+from PyQt6.QtWidgets import QDialog, QVBoxLayout, QFormLayout, QComboBox, QLineEdit, QPushButton, QMessageBox, QHBoxLayout
 
 class CalibrationDialog(QDialog):
     def __init__(self, parent, column_names, on_apply, auto_calc_callback, batch_calc_callback):

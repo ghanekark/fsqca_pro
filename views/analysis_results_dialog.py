@@ -1,7 +1,6 @@
 from PyQt6.QtWidgets import QDialog, QVBoxLayout, QTextEdit, QPushButton, QHBoxLayout, QLabel, QFileDialog, QMessageBox
 from PyQt6.QtGui import QFont
 from views.visual_boolean_dialog import VisualBooleanDialog
-import numpy as np
 
 class AnalysisResultsDialog(QDialog):
     def __init__(self, parent, results):

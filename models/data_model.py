@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import os
 import itertools
+from itertools import combinations
 import re
 from models.minimizer import QCAMinimizer
 
@@ -9,6 +10,7 @@ class QCADataModel:
     def __init__(self):
         self.dataframe = None
         self.truth_table_df = None
+        self._full_dataframe = None
 
     def load_file(self, filepath):
         """
@@ -55,6 +57,7 @@ class QCADataModel:
             # 3. Complete-case analysis (drop rows with any NaNs in the final dataframe)
             df.dropna(inplace=True)
             self.dataframe = df
+            self._full_dataframe = None # Reset filtering state
             
             final_rows = len(self.dataframe)
             dropped_rows = initial_rows - final_rows
@@ -150,7 +153,7 @@ class QCADataModel:
         except Exception as e:
             return f"Error calculating descriptives: {str(e)}"
 
-    def generate_truth_table(self, conditions, outcome):
+    def generate_truth_table(self, conditions, outcome, negate_outcome=False):
         """
         Generates a Truth Table for the given conditions and outcome.
         Includes advanced consistency metrics and case tracking.
@@ -170,6 +173,9 @@ class QCADataModel:
         
         rows = []
         outcome_data = self.dataframe[outcome].values
+        if negate_outcome:
+            outcome_data = 1 - outcome_data
+        
         case_ids = self.dataframe.iloc[:, 0].values
         
         for combo in combinations:
@@ -274,6 +280,13 @@ class QCADataModel:
         self.truth_table_df['outcome_code'] = self.truth_table_df['raw_consistency'].apply(
             lambda x: '1' if x >= consist_thresh else '0'
         )
+
+        # Sort by outcome_code (1 before 0) and then by raw_consistency (descending)
+        self.truth_table_df = self.truth_table_df.sort_values(
+            by=['outcome_code', 'raw_consistency'],
+            ascending=[False, False]
+        ).reset_index(drop=True)
+
         return True
 
     def auto_calculate_thresholds(self, column_name):
@@ -317,49 +330,75 @@ class QCADataModel:
         return True, f"Successfully auto-calibrated {count} numeric variables."
 
 
-    def run_standard_analysis(self, truth_table_df, freq_thresh, consist_thresh, assumptions_dict=None):
+    def run_standard_analysis(self, truth_table_df, freq_thresh, consist_thresh, assumptions_dict=None, analysis_config=None, tie_breaker_callback=None):
         """
         Executes standard QCA minimization (Complex, Parsimonious, and Intermediate solutions).
         Uses the provided truth_table_df which should include 'outcome_code'.
+        analysis_config: dictionary mapping '1', '0', '-', and 'rem' to 'True', 'False', or 'Don't Cares'.
+        tie_breaker_callback: optional callback to resolve tied PIs during greedy cover.
         """
         df = truth_table_df
-        
+
         # Identify non-condition columns
         condition_cols = [c for c in df.columns if c not in ['frequency', '_raw_freq', 'raw_consistency', 'outcome_code', 'pri_consist', 'sym_consist', 'cases']]
-        
-        # 1. Identify positive minterms
-        # outcome_code '1' is forced positive.
-        # outcome_code '' uses thresholds.
-        pos_mask = (df['outcome_code'] == '1') | \
-                   ((df['outcome_code'] == '') & (df['_raw_freq'] >= freq_thresh) & (df['raw_consistency'] >= consist_thresh))
-        positive_df = df[pos_mask]
-        
-        # 2. Identify remainder minterms
-        # outcome_code '-' is forced remainder.
-        # outcome_code '' and frequency < threshold is remainder.
-        rem_mask = (df['outcome_code'] == '-') | \
-                   ((df['outcome_code'] == '') & (df['_raw_freq'] < freq_thresh))
-        remainder_df = df[rem_mask]
-        
-        # 3. Convert binary configurations to strings
+
+        # 1. Gather pos_minterms, neg_minterms, and explicit_dc from the truth table
+        if analysis_config:
+            def get_state(code):
+                key = code if code != '' else 'rem'
+                return analysis_config.get(key, 'False')
+
+            pos_mask = df['outcome_code'].apply(lambda x: get_state(x) == 'True')
+            neg_mask = df['outcome_code'].apply(lambda x: get_state(x) == 'False')
+            dc_mask = df['outcome_code'].apply(lambda x: get_state(x) == "Don't Cares")
+            
+            # Special case for uncoded rows ('') if not explicitly handled by 'rem' key as 'True' or 'Don't Cares'
+            if analysis_config.get('rem') not in ['True', "Don't Cares"]:
+                auto_pos = (df['outcome_code'] == '') & (df['_raw_freq'] >= freq_thresh) & (df['raw_consistency'] >= consist_thresh)
+                auto_neg = (df['outcome_code'] == '') & ((df['_raw_freq'] < freq_thresh) | (df['raw_consistency'] < consist_thresh))
+                pos_mask = pos_mask | auto_pos
+                neg_mask = neg_mask | auto_neg
+        else:
+            # Fallback to current hardcoded logic
+            pos_mask = (df['outcome_code'] == '1') | \
+                       ((df['outcome_code'] == '') & (df['_raw_freq'] >= freq_thresh) & (df['raw_consistency'] >= consist_thresh))
+            
+            neg_mask = (df['outcome_code'] == '0') | \
+                       ((df['outcome_code'] == '') & (df['_raw_freq'] >= freq_thresh) & (df['raw_consistency'] < consist_thresh))
+
+            dc_mask = (df['outcome_code'] == '-')
+
         def df_to_bitstrings(df_subset, cols):
-            bitstrings = []
+            bitstrings = set()
             for row in df_subset.itertuples(index=False):
-                # We use getattr to safely get values by name.
                 s = "".join(str(int(getattr(row, c))) for c in cols)
-                bitstrings.append(s)
+                bitstrings.add(s)
             return bitstrings
 
-        pos_minterms = df_to_bitstrings(positive_df, condition_cols)
-        rem_minterms = df_to_bitstrings(remainder_df, condition_cols)
-        
+        pos_minterms = df_to_bitstrings(df[pos_mask], condition_cols)
+        neg_minterms = df_to_bitstrings(df[neg_mask], condition_cols)
+        explicit_dc = df_to_bitstrings(df[dc_mask], condition_cols)
+
         if len(pos_minterms) == 0:
             raise ValueError("Error: No configurations passed the frequency and consistency thresholds (The 1-Matrix is empty). Try lowering your thresholds.")
+
+        # 2. Mathematically calculate ALL possible remainders
+        k = len(condition_cols)
+        all_possible = {"".join(seq) for seq in itertools.product("01", repeat=k)}
         
-        # 4. Filter easy counterfactuals for intermediate solution
+        # Remainders = all - (pos + neg)
+        math_remainders = all_possible - pos_minterms - neg_minterms
+        
+        # 3. Filter easy counterfactuals for intermediate solution
         easy_minterms = []
         if assumptions_dict:
-            for rem in rem_minterms:
+            # Pre-calculate which bits are present at each index across all pos_minterms
+            pos_bits_at_index = []
+            for i in range(len(condition_cols)):
+                bits = {pm[i] for pm in pos_minterms}
+                pos_bits_at_index.append(bits)
+
+            for rem in math_remainders:
                 is_easy = True
                 for i, cond in enumerate(condition_cols):
                     assumption = assumptions_dict.get(cond, "Present or Absent")
@@ -369,20 +408,27 @@ class QCADataModel:
                     elif assumption == "Absent" and rem[i] == '1':
                         is_easy = False
                         break
+                    elif assumption == "Present or Absent":
+                        # Remainder must match the bit of at least one positive minterm at this index
+                        if rem[i] not in pos_bits_at_index[i]:
+                            is_easy = False
+                            break
                 if is_easy:
                     easy_minterms.append(rem)
-        
-        # 5. Instantiate minimizer
+        else:
+            easy_minterms = []
+
+        # 4. Instantiate minimizer
         minimizer = QCAMinimizer()
         
-        # 6. Complex Solution (No remainders)
-        complex_sol = minimizer.minimize(pos_minterms, [])
+        # 5. Complex Solution (Only explicit don't cares from truth table)
+        complex_sol = minimizer.minimize(list(pos_minterms), list(explicit_dc), tie_breaker_callback=tie_breaker_callback)
         
-        # 7. Parsimonious Solution (All remainders as don't cares)
-        parsimonious_sol = minimizer.minimize(pos_minterms, rem_minterms)
+        # 6. Parsimonious Solution (All mathematical remainders)
+        parsimonious_sol = minimizer.minimize(list(pos_minterms), list(math_remainders), tie_breaker_callback=tie_breaker_callback)
 
-        # 8. Intermediate Solution (Only easy remainders as don't cares)
-        intermediate_sol = minimizer.minimize(pos_minterms, easy_minterms)
+        # 7. Intermediate Solution (Only easy remainders)
+        intermediate_sol = minimizer.minimize(list(pos_minterms), list(easy_minterms), tie_breaker_callback=tie_breaker_callback)
         
         return {
             "conditions": condition_cols,
@@ -461,49 +507,59 @@ class QCADataModel:
             "term_metrics": term_metrics
         }
 
-    def calculate_necessary_conditions(self, conditions, outcome):
+    def calculate_necessary_conditions(self, conditions, outcome, negate_outcome=False):
         """
-        Calculates necessity consistency and coverage for each condition and its negation.
+        Calculates necessity consistency and coverage for each condition expression.
+        Supports fuzzy OR via '+' (e.g. 'A + B') and negation via '~'.
         """
         if self.dataframe is None:
             return None
             
         outcome_data = self.dataframe[outcome].values
+        if negate_outcome:
+            outcome_data = 1 - outcome_data
+            
         sum_outcome = np.sum(outcome_data)
-        
         if sum_outcome == 0:
             return None
             
         results = []
         
-        for cond in conditions:
-            cond_data = self.dataframe[cond].values
+        for expr in conditions:
+            # Split by '+' for fuzzy OR
+            terms = [t.strip() for t in expr.split('+')]
+            term_arrays = []
             
-            # Positive condition
+            for t in terms:
+                if t.startswith('~'):
+                    col_name = t[1:]
+                    if col_name in self.dataframe.columns:
+                        term_arrays.append(1 - self.dataframe[col_name].values)
+                else:
+                    if t in self.dataframe.columns:
+                        term_arrays.append(self.dataframe[t].values)
+            
+            if not term_arrays:
+                continue
+                
+            # Combine terms using fuzzy OR (MAX)
+            cond_data = np.maximum.reduce(term_arrays)
+            
+            # Calculate metrics
             consist = np.sum(np.minimum(cond_data, outcome_data)) / sum_outcome
             sum_cond = np.sum(cond_data)
             cover = np.sum(np.minimum(cond_data, outcome_data)) / sum_cond if sum_cond > 0 else 0.0
             
             results.append({
-                'Condition': cond,
+                'Condition': expr,
                 'Consistency': consist,
                 'Coverage': cover
             })
             
-            # Negated condition
-            neg_cond_data = 1 - cond_data
-            neg_consist = np.sum(np.minimum(neg_cond_data, outcome_data)) / sum_outcome
-            sum_neg_cond = np.sum(neg_cond_data)
-            neg_cover = np.sum(np.minimum(neg_cond_data, outcome_data)) / sum_neg_cond if sum_neg_cond > 0 else 0.0
-            
-            results.append({
-                'Condition': f"~{cond}",
-                'Consistency': neg_consist,
-                'Coverage': neg_cover
-            })
-            
         df_res = pd.DataFrame(results)
-        return df_res.sort_values(by='Consistency', ascending=False)
+        if not df_res.empty:
+            return df_res.sort_values(by='Consistency', ascending=False)
+        return df_res
 
     def compute_variable(self, target_col, expression):
         """
@@ -519,3 +575,222 @@ class QCADataModel:
             return True, f"Successfully computed variable '{target_col}'"
         except Exception as e:
             return False, f"Error computing variable: {str(e)}"
+
+    def apply_recode(self, source_col, target_col, rules):
+        """
+        Applies a series of recoding rules to a source column and saves to target column.
+        Rules are applied sequentially to unprocessed rows.
+        """
+        if self.dataframe is None:
+            return False, "Error: No data loaded."
+        
+        if source_col not in self.dataframe.columns:
+            return False, f"Error: Source column '{source_col}' not found."
+
+        try:
+            # Create a working copy
+            new_data = self.dataframe[source_col].copy()
+            # Track processed rows to ensure sequential logic (first match wins)
+            processed = pd.Series(False, index=self.dataframe.index)
+
+            for rule in rules:
+                r_type = rule.get('type')
+                new_val = rule.get('new')
+                
+                # Convert 'missing' string to actual NaN if needed
+                if new_val == 'missing':
+                    new_val = np.nan
+
+                condition_mask = None
+                
+                if r_type == 'value':
+                    condition_mask = (new_data == rule['old'])
+                elif r_type == 'missing':
+                    condition_mask = new_data.isna()
+                elif r_type == 'range':
+                    condition_mask = (new_data >= rule['min']) & (new_data <= rule['max'])
+                elif r_type == 'range_lowest':
+                    condition_mask = (new_data <= rule['max'])
+                elif r_type == 'range_highest':
+                    condition_mask = (new_data >= rule['min'])
+                elif r_type == 'otherwise':
+                    condition_mask = pd.Series(True, index=self.dataframe.index)
+                
+                if condition_mask is not None:
+                    # Apply only to rows not already handled by a previous rule
+                    actual_mask = condition_mask & ~processed
+                    new_data.loc[actual_mask] = new_val
+                    processed = processed | actual_mask
+
+            self.dataframe[target_col] = new_data
+            return True, f"Successfully recoded '{source_col}' into '{target_col}'"
+            
+        except Exception as e:
+            return False, f"Error during recode: {str(e)}"
+
+    def evaluate_term(self, term):
+        """Helper to fetch fuzzy membership for a term, handling negation."""
+        if term.startswith('~'):
+            col = term[1:]
+            return 1 - self.dataframe[col].values
+        return self.dataframe[term].values
+
+    def run_subset_superset_analysis(self, conditions, outcome, negate_outcome=False):
+        """
+        Systematically tests all combinations of conditions as subsets of the outcome.
+        """
+        if self.dataframe is None:
+            return None
+            
+        outcome_data = self.dataframe[outcome].values
+        if negate_outcome:
+            outcome_data = 1 - outcome_data
+            
+        sum_y = np.sum(outcome_data)
+        if sum_y == 0:
+            return None
+            
+        results = []
+        
+        # Generate all combinations of length 1 to N
+        for r in range(1, len(conditions) + 1):
+            for combo in combinations(conditions, r):
+                expr_str = " * ".join(combo)
+                
+                # Calculate fuzzy AND (MIN) for the combination
+                term_arrays = [self.evaluate_term(c) for c in combo]
+                if len(term_arrays) > 1:
+                    membership = np.minimum.reduce(term_arrays)
+                else:
+                    membership = term_arrays[0]
+                
+                sum_x = np.sum(membership)
+                sum_min_xy = np.sum(np.minimum(membership, outcome_data))
+                
+                # Metrics
+                subset_consist = sum_min_xy / sum_x if sum_x > 0 else 0.0
+                subset_cover = sum_min_xy / sum_y if sum_y > 0 else 0.0
+                combined = subset_consist * subset_cover
+                
+                results.append({
+                    'terms': expr_str,
+                    'consistency': subset_consist,
+                    'coverage': subset_cover,
+                    'combined': combined
+                })
+        
+        df_res = pd.DataFrame(results)
+        if not df_res.empty:
+            return df_res.sort_values(by='consistency', ascending=False)
+        return df_res
+
+    def new_dataset(self):
+        """Initializes a new empty dataset."""
+        self.dataframe = pd.DataFrame()
+        self._full_dataframe = None
+        return True, "New dataset created."
+
+    def add_case(self):
+        """Appends a new empty row to the dataset."""
+        if self.dataframe is not None:
+            # If dataframe is empty but we want to add a case, 
+            # we usually need at least one column to represent a row.
+            if self.dataframe.empty and len(self.dataframe.columns) == 0:
+                return False
+            
+            # Create a new row with NaNs
+            new_row = {col: np.nan for col in self.dataframe.columns}
+            self.dataframe = pd.concat([self.dataframe, pd.DataFrame([new_row])], ignore_index=True)
+            return True
+        return False
+
+    def select_if(self, condition):
+        """
+        Filters the dataframe based on a Boolean condition.
+        Saves the current full dataframe for later restoration.
+        """
+        if self.dataframe is None:
+            return False, "Error: No data loaded."
+
+        try:
+            # Take snapshot if this is the first selection
+            if self._full_dataframe is None:
+                self._full_dataframe = self.dataframe.copy()
+            
+            # Apply filter to the FULL dataset to avoid nested filtering confusion
+            filtered = self._full_dataframe.query(condition)
+            self.dataframe = filtered.reset_index(drop=True)
+            return True, f"Selection applied. {len(self.dataframe)} cases remain."
+            
+        except Exception as e:
+            return False, f"Invalid condition: {str(e)}"
+
+    def cancel_selection(self):
+        """Restores the full dataframe from before selection was applied."""
+        if self._full_dataframe is not None:
+            self.dataframe = self._full_dataframe.copy()
+            self._full_dataframe = None
+            return True, "Selection canceled. All cases restored."
+        return False, "No active selection to cancel."
+
+    def delete_case(self, index):
+        """Drops the case at the specified index."""
+        if self.dataframe is not None and 0 <= index < len(self.dataframe):
+            self.dataframe = self.dataframe.drop(index).reset_index(drop=True)
+            return True
+        return False
+
+    def add_variable(self, name):
+        """Adds a new empty column to the dataset."""
+        if self.dataframe is None:
+            self.dataframe = pd.DataFrame()
+            
+        if name in self.dataframe.columns:
+            return False, "Variable already exists."
+        
+        self.dataframe[name] = np.nan
+        return True, "Variable added."
+
+    def delete_variable(self, name):
+        """Removes a column from the dataset."""
+        if self.dataframe is not None and name in self.dataframe.columns:
+            self.dataframe.drop(columns=[name], inplace=True)
+            return True, "Variable deleted."
+        return False, "Variable not found."
+
+    def new_from_expression(self, var_string):
+        """Initializes a new empty dataset with columns parsed from a string."""
+        cols = var_string.replace(',', ' ').split()
+        if not cols:
+            return False, "No variables provided."
+            
+        self.dataframe = pd.DataFrame(columns=cols)
+        self._full_dataframe = None
+        return True, "Dataset initialized."
+
+    def calculate_set_coincidence(self, var1, var2, negate1=False, negate2=False):
+        """
+        Calculates the degree of overlap between two fuzzy sets (Coincidence).
+        Formula: sum(min(X, Y)) / sum(max(X, Y))
+        """
+        if self.dataframe is None:
+            return False, "Error: No data loaded."
+            
+        if var1 not in self.dataframe.columns or var2 not in self.dataframe.columns:
+            return False, "Error: Variables not found."
+
+        try:
+            x = self.dataframe[var1].values
+            y = self.dataframe[var2].values
+            
+            if negate1: x = 1 - x
+            if negate2: y = 1 - y
+            
+            sum_min = np.sum(np.minimum(x, y))
+            sum_max = np.sum(np.maximum(x, y))
+            
+            coincidence = sum_min / sum_max if sum_max > 0 else 0.0
+            return True, coincidence
+        except Exception as e:
+            return False, f"Error calculating coincidence: {str(e)}"
+

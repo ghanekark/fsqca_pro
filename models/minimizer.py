@@ -12,11 +12,19 @@ class QCAMinimizer:
                 pos = i
         return diff_count == 1, pos
 
-    def minimize(self, minterms, dont_cares=[]):
+    def _covers(self, pi, minterm):
+        """Returns True if the prime implicant (pi) covers the minterm."""
+        for i in range(len(pi)):
+            if pi[i] != '-' and pi[i] != minterm[i]:
+                return False
+        return True
+
+    def minimize(self, minterms, dont_cares=[], tie_breaker_callback=None):
         """
         Implements Quine-McCluskey minimization.
         minterms: list of binary strings (e.g. ['101', '111'])
         dont_cares: list of binary strings
+        tie_breaker_callback: optional callback to resolve tied PIs
         """
         if not minterms:
             return []
@@ -62,21 +70,69 @@ class QCAMinimizer:
                 break
             current_groups = next_groups
 
-        # Step 3: Filter out prime implicants that only cover don't cares
-        # (Simplification: for QCA we usually just want the reduced terms covering the minterms)
-        final_implicants = []
-        for pi in prime_implicants:
-            covers_minterm = False
-            for mt in minterms:
-                match = True
-                for i in range(num_bits):
-                    if pi[i] != '-' and pi[i] != mt[i]:
-                        match = False
-                        break
-                if match:
-                    covers_minterm = True
-                    break
-            if covers_minterm:
-                final_implicants.append(pi)
+        # Step 3: Prime Implicant Chart and Greedy Set Cover
+        pi_pool = list(prime_implicants)
+        
+        # Build dictionary mapping minterms to covering PIs
+        chart = {mt: [pi for pi in pi_pool if self._covers(pi, mt)] for mt in minterms}
+        
+        final_implicants = set()
+        covered_minterms = set()
 
-        return sorted(final_implicants)
+        # A. Find Essential Prime Implicants
+        for mt, covering_pis in chart.items():
+            if len(covering_pis) == 1:
+                epi = covering_pis[0]
+                final_implicants.add(epi)
+                # Mark all minterms covered by this EPI
+                for m in minterms:
+                    if self._covers(epi, m):
+                        covered_minterms.add(m)
+                # Remove EPI from pool
+                if epi in pi_pool:
+                    pi_pool.remove(epi)
+
+        # B. Greedy Set Cover for remaining uncovered minterms
+        remaining_minterms = [mt for mt in minterms if mt not in covered_minterms]
+        
+        while len(covered_minterms) < len(minterms):
+            max_newly_covered = 0
+            tied_pis = []
+            
+            for pi in pi_pool:
+                if pi in final_implicants:
+                    continue
+                
+                # Count how many currently uncovered minterms this PI would cover
+                count = sum(1 for mt in remaining_minterms if self._covers(pi, mt))
+                
+                if count > max_newly_covered:
+                    max_newly_covered = count
+                    tied_pis = [pi]
+                elif count == max_newly_covered and count > 0:
+                    tied_pis.append(pi)
+            
+            if not tied_pis:
+                break
+            
+            # Resolve tie if needed
+            if len(tied_pis) > 1 and tie_breaker_callback:
+                selected_pis = tie_breaker_callback(tied_pis)
+            else:
+                selected_pis = tied_pis # Default: take all tied PIs (or the single best)
+
+            for pi in selected_pis:
+                final_implicants.add(pi)
+                # Update covered_minterms
+                newly_covered = [mt for mt in remaining_minterms if self._covers(pi, mt)]
+                for mt in newly_covered:
+                    covered_minterms.add(mt)
+            
+            # Update remaining pool and uncovered minterms
+            for pi in tied_pis:
+                if pi in pi_pool:
+                    pi_pool.remove(pi)
+            
+            remaining_minterms = [mt for mt in remaining_minterms if mt not in covered_minterms]
+
+        return sorted(list(final_implicants))

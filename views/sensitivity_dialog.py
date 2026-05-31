@@ -1,5 +1,4 @@
 from PyQt6.QtWidgets import QDialog, QVBoxLayout, QComboBox, QFormLayout, QDoubleSpinBox, QPushButton, QTextEdit
-import numpy as np
 
 class SensitivityDialog(QDialog):
     def __init__(self, parent, model):

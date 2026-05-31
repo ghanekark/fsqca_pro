@@ -22,7 +22,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='PyQCA',
+    name='fsqca_pro',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

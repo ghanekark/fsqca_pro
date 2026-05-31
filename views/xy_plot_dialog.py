@@ -2,7 +2,6 @@ import tkinter as tk
 from tkinter import ttk
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-import numpy as np
 
 class XYPlotDialog(tk.Toplevel):
     def __init__(self, parent, dataframe):
