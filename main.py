@@ -593,6 +593,11 @@ class AppController:
                 tie_breaker_callback=self.worker.handle_tie_break
             )
 
+            # Metadata for formatting
+            results['frequency_cutoff'] = freq_thresh
+            results['consistency_cutoff'] = consist_thresh
+            results['assumptions'] = assumptions
+
             # Calculate metrics for solutions
             results['complex_metrics'] = self.model.calculate_metrics(
                 results['complex'], results['conditions'], self.current_outcome
@@ -619,6 +624,7 @@ class AppController:
 
     def _on_analysis_finished(self, results):
         self.progress_dialog.close()
+        results['outcome_name'] = self.current_outcome
         dialog = AnalysisResultsDialog(self.view, results)
         dialog.exec()
 

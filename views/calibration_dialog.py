@@ -102,8 +102,7 @@ class CalibrationDialog(QDialog):
 
         # Apply Button (Manual)
         self.apply_btn = QPushButton("Calibrate")
-        self.apply_btn.setFixedHeight(40)
-        self.apply_btn.setStyleSheet("font-weight: bold; background-color: #4CAF50; color: white;")
+        self.apply_btn.setObjectName("SuccessButton")
         self.apply_btn.clicked.connect(self._handle_apply)
         left_layout.addWidget(self.apply_btn)
         
@@ -111,20 +110,7 @@ class CalibrationDialog(QDialog):
         
         # Batch Auto-Calibration Button (PRD 007)
         self.batch_btn = QPushButton("Batch Auto-Calibrate All Numeric")
-        self.batch_btn.setFixedHeight(35)
-        self.batch_btn.setStyleSheet("""
-            QPushButton { 
-                font-weight: bold; 
-                background-color: palette(button); 
-                border: 1px solid palette(mid); 
-                border-radius: 4px;
-            }
-            QPushButton:hover {
-                background-color: palette(highlight);
-                color: palette(highlighted-text);
-            }
-        """)
-        self.batch_btn.setToolTip("Automatically calibrate all numeric columns using 95th/50th/5th percentiles.")
+        self.batch_btn.setObjectName("PrimaryButton")
         self.batch_btn.clicked.connect(self._handle_batch)
         left_layout.addWidget(self.batch_btn)
         

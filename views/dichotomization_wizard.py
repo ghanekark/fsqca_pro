@@ -44,7 +44,7 @@ class DichotomizationWizard(QDialog):
 
         # Header
         header = QLabel("Dichotomization Parameters")
-        header.setStyleSheet("font-size: 18px; font-weight: bold; color: palette(text);")
+        header.setObjectName("HeaderLabel")
         main_layout.addWidget(header)
 
         # Top Section: Form Layout
@@ -73,36 +73,25 @@ class DichotomizationWizard(QDialog):
         # Statistics Section (Styled Frame)
         stats_group = QFrame()
         stats_group.setFrameShape(QFrame.Shape.StyledPanel)
-        stats_group.setStyleSheet("""
-            QFrame { 
-                background-color: palette(window); 
-                border: 1px solid palette(mid); 
-                border-radius: 6px; 
-            }
-            QLabel {
-                background-color: transparent;
-            }
-        """)
+        stats_group.setObjectName("StatsGroup")
         stats_layout = QVBoxLayout(stats_group)
         stats_layout.setContentsMargins(15, 15, 15, 15)
         
         stats_header = QLabel("Distribution Statistics")
-        stats_header.setStyleSheet("font-weight: bold; color: palette(text);")
+        stats_header.setObjectName("SubHeaderLabel")
         stats_layout.addWidget(stats_header)
 
         self.stats_label = QLabel("Select a variable to see statistics...")
-        self.stats_label.setStyleSheet("font-family: 'Consolas', 'Monaco', monospace; color: palette(text);")
+        self.stats_label.setObjectName("MonospaceLabel")
         stats_layout.addWidget(self.stats_label)
 
         # Quick Thresh Buttons
         btn_layout = QHBoxLayout()
         btn_layout.setSpacing(10)
         self.mean_btn = QPushButton("Use Mean")
-        self.mean_btn.setStyleSheet("padding: 5px 15px;")
         self.mean_btn.clicked.connect(self._use_mean)
         
         self.median_btn = QPushButton("Use Median")
-        self.median_btn.setStyleSheet("padding: 5px 15px;")
         self.median_btn.clicked.connect(self._use_median)
         
         btn_layout.addStretch()
@@ -124,13 +113,10 @@ class DichotomizationWizard(QDialog):
         footer_layout.addStretch()
         
         self.cancel_btn = QPushButton("Cancel")
-        self.cancel_btn.setMinimumWidth(100)
         self.cancel_btn.clicked.connect(self.reject)
         
         self.apply_btn = QPushButton("Create Variable")
-        self.apply_btn.setMinimumWidth(150)
-        self.apply_btn.setFixedHeight(35)
-        self.apply_btn.setStyleSheet("font-weight: bold; background-color: #3498db; color: white; border-radius: 4px;")
+        self.apply_btn.setObjectName("SuccessButton")
         self.apply_btn.clicked.connect(self._handle_apply)
         
         footer_layout.addWidget(self.cancel_btn)

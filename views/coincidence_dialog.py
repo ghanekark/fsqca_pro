@@ -43,19 +43,17 @@ class CoincidenceDialog(QDialog):
         res_layout = QVBoxLayout(self.result_group)
         self.result_label = QLabel("Coincidence Score: ---")
         self.result_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.result_label.setStyleSheet("font-size: 14pt; font-weight: bold; color: #2ecc71;")
+        self.result_label.setObjectName("ResultLabel")
         res_layout.addWidget(self.result_label)
         layout.addWidget(self.result_group)
         
         # --- Action Buttons ---
         btn_layout = QHBoxLayout()
         self.calculate_btn = QPushButton("Calculate Coincidence")
-        self.calculate_btn.setFixedHeight(40)
-        self.calculate_btn.setStyleSheet("background-color: #3498db; color: white; font-weight: bold;")
+        self.calculate_btn.setObjectName("PrimaryButton")
         self.calculate_btn.clicked.connect(self._on_calculate)
         
         self.close_btn = QPushButton("Close")
-        self.close_btn.setFixedHeight(40)
         self.close_btn.clicked.connect(self.accept)
         
         btn_layout.addWidget(self.calculate_btn)

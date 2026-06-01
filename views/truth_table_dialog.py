@@ -4,9 +4,10 @@ from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel,
                              QMessageBox, QGroupBox, QMenuBar,
                              QDialogButtonBox, QSpinBox, QDoubleSpinBox,
                              QRadioButton, QButtonGroup, QGridLayout,
-                             QCheckBox, QScrollArea, QWidget)
+                             QCheckBox, QScrollArea, QWidget, QFileDialog)
 from PyQt6.QtGui import QAction, QKeySequence
 import numpy as np
+from utils.formatter import ResultFormatter
 
 class VariableSelectionDialog(QDialog):
     def __init__(self, parent, column_names, on_generate):
@@ -121,6 +122,11 @@ class EditTruthTableDialog(QDialog):
         
         toolbar_layout.addWidget(edit_group)
 
+        # Export Button
+        self.export_btn = QPushButton("Export Table")
+        self.export_btn.clicked.connect(self._on_export)
+        toolbar_layout.addWidget(self.export_btn)
+
         # Specify Analysis Button
         self.specify_btn = QPushButton("Specify Analysis")
         self.specify_btn.clicked.connect(self.specify_analysis_callback)
@@ -149,6 +155,29 @@ class EditTruthTableDialog(QDialog):
                 self.table.setItem(row_idx, col_idx, item)
                 
         self.table.resizeColumnsToContents()
+
+    def _on_export(self):
+        filepath, selected_filter = QFileDialog.getSaveFileName(
+            self, "Export Truth Table", "", "Text Document (*.txt);;CSV Files (*.csv)"
+        )
+        if not filepath:
+            return
+
+        try:
+            if "CSV" in selected_filter:
+                if not filepath.lower().endswith(".csv"):
+                    filepath += ".csv"
+                content = ResultFormatter.format_truth_table_csv(self.model.truth_table_df)
+            else:
+                if not filepath.lower().endswith(".txt"):
+                    filepath += ".txt"
+                content = self.model.truth_table_df.to_string(index=False)
+
+            with open(filepath, "w", encoding="utf-8") as f:
+                f.write(content)
+            QMessageBox.information(self, "Success", f"Truth table successfully exported to:\n{filepath}")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Could not export file: {str(e)}")
 
     def _on_delete_row(self):
         row = self.table.currentRow()
@@ -370,4 +399,3 @@ class PrimeImplicantChartDialog(QDialog):
         if not selected:
             return self.tied_pis
         return selected
-

@@ -11,10 +11,12 @@ A specialized desktop application for **Fuzzy-Set Qualitative Comparative Analys
 ### 🏗️ Engineering Excellence
 - **Strict MVC/MVVM Architecture:** Ensures a clean separation between set-theoretic algorithms (`models`), high-density user interfaces (`views`), and coordination logic (`controllers`).
 - **Non-blocking Asynchronous UI:** All heavy computational tasks—including Quine-McCluskey minimization and batch calibration—are offloaded to background `QThread` workers, maintaining a fluid 60FPS user experience even with large datasets.
+- **UI Uniformity & Semantic Styling:** A centralized styling system utilizing `template.qss` and semantic object naming (e.g., `PrimaryButton`, `SuccessButton`). This ensures professional visual consistency and perfect theme responsiveness across all application layers.
 - **Dynamic Theme Engine:** Native support for Dark and Light modes, with user preferences persisted across sessions.
 
 ### 🧪 Advanced fsQCA Capabilities
 - **Direct Method Calibration Interface:** A professional workspace for converting raw variables into fuzzy sets using qualitative anchors. Features real-time `matplotlib` distribution histograms with interactive anchor overlays.
+- **Structured Export Engine (CSV & TXT):** High-fidelity export for Truth Tables and Standard Analysis results. Outputs are professionally aligned with Ragin's fsQCA standards, including methodological metadata (cutoffs, model definitions) and canonical solution sequencing.
 - **Complexity-Parsimony Continuum Visualizer:** A unique auditing tool that aligns Complex, Intermediate, and Parsimonious solutions side-by-side, highlighting "Core" vs. "Complementary" conditions to make simplifying assumptions transparent.
 - **Informed Dichotomization Wizard**: A guided workflow for converting continuous or fuzzy variables into crisp sets ($0/1$). Features integrated statistical guidance (Mean, Median, Min, Max) and support for theoretical justification.
 - **Set Coincidence Diagnostic Engine**: Quantifies the degree of overlap and alignment between fuzzy sets using the coincidence formula, with full support for set negation and high-performance NumPy-based calculations.
@@ -28,13 +30,23 @@ A specialized desktop application for **Fuzzy-Set Qualitative Comparative Analys
 - **Ingestion Sanitization Reporting:** Automatically generates a "Transparency Report" during data load, documenting all automated renaming, type conversions, and case-dropping actions.
 - **Visual Audit Tooltips:** Hover over any variable in the main data grid to instantly view its calibration anchors and theoretical rationale.
 
-## 🛠️ Installation
+## 🛠️ Getting Started
 
-### Prerequisites
+You can choose to either download the pre-compiled executable directly (no installation required) or run the application from source.
+
+### Option 1: Download the Executable (Recommended for Windows Users)
+The easiest way to use `fsqca_pro` is to download the standalone executable.
+1. Navigate to the [Releases](https://github.com/ghanekark/fsqca_pro/releases) page on GitHub.
+2. Download the latest compiled executable (`.exe` or `.zip`) from the assets section.
+3. Double-click the downloaded file to run the application directly. No Python installation is required.
+
+### Option 2: Run from Source
+
+#### Prerequisites
 - Python 3.10 or higher
 - Windows 10/11 (Optimized for high-DPI scaling)
 
-### Setup
+#### Setup
 1. **Clone the repository:**
    ```bash
    git clone https://github.com/ghanekark/fsqca_pro.git

@@ -33,7 +33,7 @@ class SanitizationReportDialog(QDialog):
         
         # Header
         header = QLabel("Scientific Transparency Report: Data Ingestion")
-        header.setStyleSheet("font-weight: bold; font-size: 14px; color: palette(text);")
+        header.setObjectName("SubHeaderLabel")
         layout.addWidget(header)
         
         description = QLabel(
@@ -64,9 +64,7 @@ class SanitizationReportDialog(QDialog):
         btn_layout.addStretch()
         
         ok_btn = QPushButton("Acknowledge")
-        ok_btn.setFixedHeight(35)
-        ok_btn.setMinimumWidth(120)
-        ok_btn.setStyleSheet("font-weight: bold; background-color: #4CAF50; color: white;")
+        ok_btn.setObjectName("SuccessButton")
         ok_btn.clicked.connect(self.accept)
         btn_layout.addWidget(ok_btn)
         

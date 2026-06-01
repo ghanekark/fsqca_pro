@@ -50,9 +50,14 @@ class ThemeController(QObject):
             text_primary=palette.text_primary,
             text_secondary=palette.text_secondary,
             accent_primary=palette.accent_primary,
+            accent_hover=palette.accent_hover,
             border_color=palette.border_color,
             selection_bg=palette.selection_bg,
-            selection_text=palette.selection_text
+            selection_text=palette.selection_text,
+            success_color=palette.success_color,
+            warning_color=palette.warning_color,
+            error_color=palette.error_color,
+            link_color=palette.link_color
         )
 
         # Apply to global application instance

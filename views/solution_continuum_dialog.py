@@ -36,7 +36,7 @@ class SolutionContinuumDialog(QDialog):
         layout = QVBoxLayout(self)
         
         label = QLabel("Audit of Simplifying Assumptions (Side-by-Side Solution Alignment)")
-        label.setStyleSheet("font-weight: bold; font-size: 14px;")
+        label.setObjectName("SubHeaderLabel")
         layout.addWidget(label)
         
         description = QLabel(

@@ -1,44 +1,227 @@
-# fsqca_pro: Project Instructions
+# fsqca_pro: Gemini CLI Development Instructions
 
-This document defines the foundational mandates, architecture, and engineering standards for the `fsqca_pro` project. All development must adhere to these guidelines.
+These instructions define the operational contract for Gemini CLI when working on the `fsqca_pro` repository. Follow them exactly.
 
-## 1. Core Mandates
+## 1. Project Profile
+
 - **Language:** Python 3.10+
-- **Framework:** PyQt6
-- **Dependency Management:** `requirements.txt`
-- **Style Guide:** Strict adherence to [PEP 8](https://peps.python.org/pep-0008/).
+- **UI Stack:** PyQt6 `QtWidgets` only (`QMainWindow`, `QDialog`, `QPushButton`, `QTableWidget`, etc.)
+- **Theming:** Centralized Qt Style Sheets (QSS) via `styles/template.qss`
+- **Target Platforms:** Windows first; preserve macOS compatibility
+- **Architecture:** MVC with a strong controller layer
+- **Primary entry point:** `main.py`
 
-## 2. Engineering Standards
+Do not introduce QtQuick / QML, hybrid UI stacks, or platform-specific GUI assumptions.
 
-### Type Safety
-- **Strict Type Hinting:** All functions and methods must include comprehensive type hints for parameters and return values.
-- **No `Any`:** Avoid using `Any` where a more specific type can be defined.
+---
 
-### Architectural Patterns
-- **Separation of Concerns:** Maintain a strict separation between UI code (`views/`), business logic (`models/`), and coordination logic (`controllers/`).
-- **MVC/MVVM:** Use Model-View-Controller or Model-View-ViewModel patterns to ensure the UI remains thin and logic remains testable.
-- **Signal/Slot Communication:** Prefer PyQt signals and slots for communication between components rather than direct method calls across layers.
+## 2. Core Engineering Rules
 
-### UI & Performance
-- **Non-blocking UI:** Any operation that takes longer than 100ms (e.g., file I/O, complex minimization, large data transformations) **MUST** be offloaded to a `QThread` or `QRunnable`.
-- **Responsive Design:** Use layouts (`QVBoxLayout`, `QHBoxLayout`, `QGridLayout`) exclusively. Avoid fixed geometries (`setGeometry`).
-- **Resource Management:** Ensure proper cleanup of resources and parent-child relationships in Qt objects to prevent memory leaks.
+### 2.1 Scope Control
+- Make the smallest change that satisfies the request.
+- Do not refactor unrelated code.
+- Do not rename symbols, files, modules, or signals unless explicitly requested.
+- Do not perform opportunistic cleanup.
+- Preserve public APIs, signal signatures, and existing user-visible behavior unless the task requires a change.
 
-## 3. Directory Structure
-- `main.py`: Application entry point and controller initialization.
-- `models/`: Data processing, QCA algorithms, and business logic.
-- `views/`: PyQt6 windows, dialogs, and custom widgets.
-- `controllers/`: Logic binding models and views.
-- `utils/`: Helpers, worker threads, and formatters.
+### 2.2 Type Safety
+- Use explicit type hints on all new functions, methods, and signal-related helpers.
+- Avoid `Any` unless required by PyQt or a third-party API boundary.
+- Prefer `Protocol`, `TypedDict`, `Enum`, `Literal`, `dataclass`, and concrete container types when they improve clarity.
 
-## 4. Quality and Documentation
-- Docstrings: Specify a standard. For example: "Use Google Style docstrings for all classes and functions to document parameters and return types."
-- Error Handling & Logging: Guide the CLI on how to handle failures. For example: "Do not use print() statements. Use Python's native logging module. For user-facing critical errors, surface them using QMessageBox.critical."
-- Testing: Tell the model how to write tests for your specific stack. For example: "Write unit tests using pytest and pytest-qt. Ensure all controller logic is tested independently of the views."
+### 2.3 Python Style
+- Follow PEP 8.
+- Prefer readable, explicit code over clever code.
+- Keep functions short and single-purpose.
+- Do not introduce new architectural abstractions unless they reduce complexity immediately.
 
-## 5. Execution & Modification Boundaries
-When modifying code, adding features, or debugging, you MUST adhere to the following strict boundaries:
-- **Zero Collateral Damage:** Do not change, refactor, or "clean up" anything outside the exact scope of the immediate prompt or the current PRD step.
-- **Precision Preservation:** Retain all surrounding code, logic, and formatting precisely as is. 
-- **Containment:** Ensure your updates do not introduce side effects to other components, particularly existing PyQt6 UI threads, models, and signal/slot connections.
-- **No Unsolicited Rewrites:** Provide only the code requested. Never rewrite or alter surrounding functions unless explicitly commanded to do so.
+---
+
+## 3. Architecture Rules
+
+### 3.1 MVC Boundaries
+- `models/` contains domain logic, data processing, and state.
+- `views/` contains Qt widgets, dialogs, and presentation logic only.
+- `controllers/` contains coordination logic between models and views.
+- `utils/` contains helpers, workers, formatting, and logging utilities.
+- `styles/` contains QSS only.
+
+### 3.2 Controller Discipline
+- `main.py` may initialize the application and wire the top-level controller, but it must not accumulate unrelated feature logic.
+- Prefer not to expand `AppController` with new, unrelated workflows when a feature-specific controller or helper is the clearer boundary.
+- Prefer feature-local orchestration over a monolithic controller when adding new functionality.
+- Preserve the current controller/view/model event flow unless a change explicitly requires reworking it.
+
+### 3.3 Signal/Slot Communication
+- Use Qt signals and slots for cross-component communication.
+- Do not call deep view methods from models.
+- Do not let views reach into models for business logic.
+- Avoid direct UI updates from worker objects; emit data back to the GUI thread instead.
+
+---
+
+## 4. Threading and Responsiveness
+
+### 4.1 Non-Blocking UI
+- Never run file I/O, parsing, export/import, data transformation, or heavy computation on the GUI thread when the task may take more than a trivial amount of time.
+- Preserve the application’s responsiveness at all times.
+
+### 4.2 Worker Pattern
+- Use the existing worker architecture in `utils/worker.py` as the default threading pattern.
+- Consider `QThreadPool` / `QRunnable` when it clearly simplifies a short-lived or isolated task, but keep any change contained and consistent with the existing worker architecture.
+- Never update Qt widgets from any background thread.
+- Use signals to return results, errors, and completion events to the GUI thread.
+
+### 4.3 Thread-Safety
+- Preserve any existing interruption, pause, or tie-breaker behavior in workers.
+- Do not bypass or simplify worker synchronization without checking the full call chain.
+- Handle worker errors explicitly and surface them back to the controller or view in a controlled way.
+
+---
+
+## 5. Data and Model Rules
+
+### 5.1 Model Responsibilities
+- `QCADataModel` owns the application’s Pandas/Numpy data state and transformation logic.
+- Keep business rules in the model, not in views.
+- Prefer vectorized Pandas/Numpy operations over row-by-row Python loops where practical.
+
+### 5.2 Data Loading and Export
+- Keep file loading, parsing, and export logic isolated from UI code.
+- Use clear boundaries between:
+  - user interaction
+  - model transformation
+  - result formatting
+  - file system access
+
+### 5.3 Structured Data
+- Use dataclasses for structured application data where appropriate.
+- Do not replace structured model objects with ad hoc dictionaries unless there is a concrete boundary reason.
+
+---
+
+## 6. Table and Grid UI Rules
+
+### 6.1 Current Baseline
+- The codebase currently uses `QTableWidget` extensively.
+- Preserve existing behavior unless the task specifically targets data-grid performance or refactoring.
+
+### 6.2 New Grid Work
+- For any new non-trivial or scalable dataset presentation, prefer `QTableView` with `QAbstractTableModel` or `QAbstractItemModel`.
+- Do not add new large item-based tables if a model/view implementation is feasible.
+- Avoid cell-by-cell population loops in the GUI thread for large datasets.
+
+### 6.3 Performance Boundary
+- Treat any table population that iterates through large Pandas DataFrames as a potential UI freeze risk.
+- Move data preparation out of widget code whenever possible.
+
+---
+
+## 7. Styling and Theming Rules
+
+### 7.1 Centralized QSS
+- All application styling must flow through `styles/template.qss` and the existing theme controller mechanism.
+- Do not introduce scattered `setStyleSheet()` calls in views.
+- Do not inline colors, fonts, borders, or theme tokens inside widget code unless there is a narrowly scoped exception.
+
+### 7.2 Styling Mechanism
+- Use `objectName` and Qt selectors for styling.
+- Preserve the existing `ThemeController` / `ThemeModel` pattern.
+- When adding new visual states, extend the centralized QSS instead of duplicating style logic in code.
+
+### 7.3 Theme Changes
+- Keep theme generation deterministic and reversible.
+- Do not break existing selector names or theme token substitution without a strong reason.
+
+---
+
+## 8. Resources and Assets
+
+- This project is currently text-and-layout driven.
+- Do not assume icons, images, or `.qrc` resources exist.
+- Do not add absolute filesystem paths for resources.
+- Use `pathlib` for paths and keep code compatible with Windows and future macOS builds.
+- If assets are introduced later, prefer a Qt resource approach or a clearly defined asset path strategy.
+
+---
+
+## 9. Error Handling and Logging
+
+### 9.1 Logging
+- Use the `logging` module.
+- Do not use `print()` for normal application flow.
+- Use `logger.debug()`, `logger.info()`, `logger.warning()`, `logger.error()`, and `logger.exception()` appropriately.
+
+### 9.2 User-Facing Errors
+- Use `QMessageBox.critical()` for fatal or blocking errors.
+- Use `QMessageBox.warning()` for validation and recoverable issues.
+- Use `QMessageBox.information()` for important user confirmations or state changes.
+- Keep user-facing messages concise, accurate, and actionable.
+
+### 9.3 Exception Handling
+- Catch exceptions only where you can handle them meaningfully.
+- Do not swallow exceptions silently.
+- Preserve stack traces in logs for unexpected failures.
+
+---
+
+## 10. Testing Rules
+
+- Require tests for algorithmic changes, bug fixes, and non-trivial business logic changes.
+- Use `pytest` for unit tests.
+- Use `pytest-qt` for Qt widget and signal/slot tests.
+- Add regression tests when fixing bugs.
+- Avoid changing behavior without adding or updating tests when practical.
+- Keep GUI tests focused on interaction and state, not implementation details.
+
+---
+
+## 11. Packaging and Distribution
+
+- Preserve compatibility with Windows packaging.
+- Keep code compatible with PyInstaller builds.
+- Avoid runtime assumptions that break frozen executables.
+- Do not depend on fragile working-directory behavior.
+- Keep file/resource access explicit and portable.
+
+---
+
+## 12. Modification Boundaries
+
+When implementing a change:
+
+1. Read the surrounding code first.
+2. Identify the exact affected path through views, controllers, models, and workers.
+3. Make the smallest safe edit that satisfies the request.
+4. Preserve existing formatting and local conventions.
+5. Avoid collateral refactors unless the task explicitly calls for them.
+6. Do not introduce new dependencies unless the task explicitly requires them.
+7. Do not alter unrelated dialogs, signals, or controllers.
+
+If a request appears to require a broader architectural change, isolate the smallest useful increment first and expand only when needed to complete the requested work cleanly.
+
+---
+
+## 13. Default Implementation Preferences
+
+When multiple valid approaches exist, prefer:
+- existing project patterns over new patterns
+- explicit code over implicit magic
+- controller coordination over view logic
+- model-centric data processing over UI-side processing
+- centralized QSS over widget-local styling
+- small, testable functions over large routines
+
+---
+
+## 14. Deliverable Expectations
+
+For code changes:
+- Provide only the requested code or the smallest necessary diff.
+- Do not rewrite surrounding modules unless asked.
+- Keep behavior consistent unless the user requests a change.
+- Preserve the current application architecture unless the task explicitly targets architecture or the requested change depends on a broader adjustment.
+
+For analysis:
+- Base conclusions on the repository contents.
+- Do not speculate when the codebase provides a clear answer.

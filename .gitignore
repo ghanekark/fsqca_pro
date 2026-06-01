@@ -41,17 +41,31 @@ desktop.ini
 *.swp
 *.swo
 
-# Environment & Secrets
+# Environment & Secrets (Mandatory Security)
 .env
+.env.*
 .venv
+*.key
+*.pem
+*.token
+*.p12
+*.pfx
+*.p7b
+*.p8
+*.crt
+*.jks
+secrets/
+config/internal_configs.*
+auth_tokens.json
 .gitignore
 .geminiignore
 
 # Documentation
 docs/prds/
 docs/ragin_feature_backlog.md
+GEMINI.md
 
-# Data & Literature
+# Sensitive Data & Large Datasets
 *.csv
 *.xlsx
 *.dat
@@ -59,3 +73,9 @@ docs/ragin_feature_backlog.md
 *.sqlite3
 *.db
 chunked_literature/
+test_datasets/
+raw_data/
+sensitive_data/
+test_research_log.*
+*.bak
+*.tmp

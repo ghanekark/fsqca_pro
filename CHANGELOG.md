@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Structured Export Engine (CSV & TXT)**: New export functionality for Truth Tables and Standard Analysis results with dual-format support (TXT/CSV). Outputs are now professionally aligned with Ragin's fsQCA standards, including metadata cutoffs, model definitions, and canonical solution sequencing (Complex → Parsimonious → Intermediate) [PRD 011].
 - **Dynamic Theme Engine**: Centralized dark/light mode toggle with persistence across sessions via `QSettings` [PRD 001].
 - **Direct Method Calibration Interface**: A specialized interactive dialog for setting qualitative anchors (Full, Crossover, Non-membership) with real-time `matplotlib` histogram visualization [PRD 002].
 - **Complexity-Parsimony Continuum Visualizer**: A dedicated tabular view to audit the simplifying assumptions by aligning Complex, Intermediate, and Parsimonious solutions side-by-side [PRD 003].
@@ -21,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Metadata Tooltips**: Enhanced the main data grid to display calibration anchors and rationales when hovering over column headers.
 
 ### Changed
+- **UI Uniformity & Semantic Styling**: System-wide refactor to eliminate hardcoded styles. Migrated all visual logic to a centralized semantic system in `template.qss` using Qt Object Names (e.g., `PrimaryButton`, `SuccessButton`, `LinkButton`), ensuring perfect theme responsiveness and design consistency across all dialogs [PRD 012].
 - **System-Wide Numeric Filtering**: Systematically updated all analytical modules (Truth Table, Necessity, Subset, Coincidence, Descriptives) to filter for numeric-only variables, preventing mathematical errors on ID or string columns.
 - **Theme-Aware UI Palette**: Migrated hardcoded colors in multiple dialogs (Analysis Results, Calibration, Necessity, Sanitization) to use the `palette()` function, ensuring full compatibility with dark mode switching.
 - **Asynchronous Workflows**: Refactored Necessity Analysis and Batch Calibration to run in background `QThread` workers, ensuring the UI remains non-blocking for large datasets.

@@ -57,8 +57,11 @@ QTextEdit {
     border: 1px solid ${border_color};
 }
 
+/* --- Buttons --- */
+
 QPushButton {
     background-color: ${bg_secondary};
+    color: ${text_primary};
     border: 1px solid ${border_color};
     padding: 5px 15px;
     min-width: 80px;
@@ -69,10 +72,84 @@ QPushButton:hover {
     color: ${selection_text};
 }
 
+/* Primary Action Button */
+QPushButton#PrimaryButton {
+    background-color: ${accent_primary};
+    color: white;
+    font-weight: bold;
+    border: 1px solid ${accent_primary};
+}
+
+QPushButton#PrimaryButton:hover {
+    background-color: ${accent_hover};
+}
+
+/* Success/Confirmation Button */
+QPushButton#SuccessButton {
+    background-color: ${success_color};
+    color: white;
+    font-weight: bold;
+    border: 1px solid ${success_color};
+}
+
+/* Link/Special Navigation Button */
+QPushButton#LinkButton {
+    background-color: transparent;
+    color: ${link_color};
+    font-weight: bold;
+    border: none;
+    text-decoration: underline;
+    min-width: 0;
+    padding: 5px;
+}
+
+QPushButton#LinkButton:hover {
+    color: ${accent_hover};
+    background-color: transparent;
+}
+
+/* Warning/Secondary Action */
+QPushButton#WarningButton {
+    color: ${warning_color};
+    border: 1px solid ${warning_color};
+}
+
+/* --- Dialogs & Labels --- */
+
 QDialog {
     background-color: ${bg_primary};
 }
 
 QLabel {
     background: transparent;
+}
+
+QLabel#HeaderLabel {
+    font-size: 18px;
+    font-weight: bold;
+    color: ${text_primary};
+}
+
+QLabel#SubHeaderLabel {
+    font-weight: bold;
+    color: ${text_primary};
+}
+
+QLabel#ResultLabel {
+    font-size: 14pt;
+    font-weight: bold;
+    color: ${success_color};
+}
+
+QLabel#MonospaceLabel {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    color: ${text_primary};
+}
+
+/* --- Specialized Groups --- */
+
+QGroupBox#StatsGroup {
+    border: 1px solid ${border_color};
+    margin-top: 10px;
+    padding-top: 10px;
 }
