@@ -16,11 +16,15 @@ A specialized desktop application for **Fuzzy-Set Qualitative Comparative Analys
 ### 🧪 Advanced fsQCA Capabilities
 - **Direct Method Calibration Interface:** A professional workspace for converting raw variables into fuzzy sets using qualitative anchors. Features real-time `matplotlib` distribution histograms with interactive anchor overlays.
 - **Complexity-Parsimony Continuum Visualizer:** A unique auditing tool that aligns Complex, Intermediate, and Parsimonious solutions side-by-side, highlighting "Core" vs. "Complementary" conditions to make simplifying assumptions transparent.
-- **Scientific Necessity Auditor:** Enhanced necessity analysis including "Relevance of Necessity" (RoN) and Triviality proxies, allowing researchers to distinguish between substantive findings and empirical artifacts.
+- **Informed Dichotomization Wizard**: A guided workflow for converting continuous or fuzzy variables into crisp sets ($0/1$). Features integrated statistical guidance (Mean, Median, Min, Max) and support for theoretical justification.
+- **Set Coincidence Diagnostic Engine**: Quantifies the degree of overlap and alignment between fuzzy sets using the coincidence formula, with full support for set negation and high-performance NumPy-based calculations.
+- **Scientific Necessity Auditor**: Enhanced necessity analysis including "Relevance of Necessity" (RoN) and Triviality proxies, allowing researchers to distinguish between substantive findings and empirical artifacts.
 - **One-Click Batch Calibration:** Rapidly operationalize entire datasets using industry-standard percentile benchmarks (95th/50th/5th).
 
 ### 📝 Methodological Transparency
+- **System-Wide Analytic Guards:** Every analytical module—from Truth Tables to Coincidence diagnostics—includes automatic numeric-only filtering to ensure mathematical integrity.
 - **Automated Metadata Audit Log:** Captures and persists the theoretical justifications for every calibrated variable in companion `.meta.json` files.
+- **Research Transparency & Replicability Logger:** A centralized logging system that automatically records all critical analytical decisions and qualitative justifications, facilitating the generation of a complete research audit trail.
 - **Ingestion Sanitization Reporting:** Automatically generates a "Transparency Report" during data load, documenting all automated renaming, type conversions, and case-dropping actions.
 - **Visual Audit Tooltips:** Hover over any variable in the main data grid to instantly view its calibration anchors and theoretical rationale.
 
@@ -61,3 +65,4 @@ A specialized desktop application for **Fuzzy-Set Qualitative Comparative Analys
 - **`views/`**: PyQt6 windows and dialogs for analysis and visualization.
 - **`styles/`**: QSS templates for dynamic theming.
 - **`utils/`**: Asynchronous workers, result formatters, and helper functions.
+helper functions.

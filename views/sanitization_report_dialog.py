@@ -33,7 +33,7 @@ class SanitizationReportDialog(QDialog):
         
         # Header
         header = QLabel("Scientific Transparency Report: Data Ingestion")
-        header.setStyleSheet("font-weight: bold; font-size: 14px; color: #1a237e;")
+        header.setStyleSheet("font-weight: bold; font-size: 14px; color: palette(text);")
         layout.addWidget(header)
         
         description = QLabel(

@@ -1,13 +1,15 @@
 
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, 
-                             QComboBox, QCheckBox, QGroupBox, QDialogButtonBox)
+                             QComboBox, QCheckBox, QGroupBox, QDialogButtonBox, QPushButton)
+from PyQt6.QtCore import Qt
 
 class CoincidenceDialog(QDialog):
-    def __init__(self, parent, column_names):
+    def __init__(self, parent, column_names, calculate_callback=None):
         super().__init__(parent)
-        self.setWindowTitle("Set Coincidence")
-        self.resize(400, 250)
+        self.setWindowTitle("Set Coincidence Diagnostic")
+        self.resize(450, 300)
         self.column_names = column_names
+        self.calculate_callback = calculate_callback
         
         self._setup_ui()
 
@@ -35,14 +37,40 @@ class CoincidenceDialog(QDialog):
         layout_y.addWidget(self.combo_y)
         layout_y.addWidget(self.negate_y)
         layout.addWidget(group_y)
+
+        # --- Result Section ---
+        self.result_group = QGroupBox("Diagnostic Result")
+        res_layout = QVBoxLayout(self.result_group)
+        self.result_label = QLabel("Coincidence Score: ---")
+        self.result_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.result_label.setStyleSheet("font-size: 14pt; font-weight: bold; color: #2ecc71;")
+        res_layout.addWidget(self.result_label)
+        layout.addWidget(self.result_group)
         
-        # --- Buttons ---
-        self.buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
-        )
-        self.buttons.accepted.connect(self.accept)
-        self.buttons.rejected.connect(self.reject)
-        layout.addWidget(self.buttons)
+        # --- Action Buttons ---
+        btn_layout = QHBoxLayout()
+        self.calculate_btn = QPushButton("Calculate Coincidence")
+        self.calculate_btn.setFixedHeight(40)
+        self.calculate_btn.setStyleSheet("background-color: #3498db; color: white; font-weight: bold;")
+        self.calculate_btn.clicked.connect(self._on_calculate)
+        
+        self.close_btn = QPushButton("Close")
+        self.close_btn.setFixedHeight(40)
+        self.close_btn.clicked.connect(self.accept)
+        
+        btn_layout.addWidget(self.calculate_btn)
+        btn_layout.addWidget(self.close_btn)
+        layout.addLayout(btn_layout)
+
+    def _on_calculate(self):
+        """Triggers the calculation via the provided callback and updates the UI."""
+        if self.calculate_callback:
+            var1, var2, neg1, neg2 = self.get_selections()
+            success, result = self.calculate_callback(var1, var2, neg1, neg2)
+            if success:
+                self.result_label.setText(f"Coincidence Score: {result:.4f}")
+            else:
+                self.result_label.setText(f"Error: {result}")
 
     def get_selections(self):
         """Returns (var1, var2, negate1, negate2)"""

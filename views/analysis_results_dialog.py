@@ -34,7 +34,7 @@ class AnalysisResultsDialog(QDialog):
         
         self.continuum_btn = QPushButton("View Solution Continuum")
         self.continuum_btn.clicked.connect(self._handle_continuum)
-        self.continuum_btn.setStyleSheet("font-weight: bold; color: #1a237e;")
+        self.continuum_btn.setStyleSheet("font-weight: bold; color: palette(link);")
         btn_layout.addWidget(self.continuum_btn)
         
         btn_layout.addStretch()

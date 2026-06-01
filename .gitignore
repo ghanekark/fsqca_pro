@@ -44,6 +44,8 @@ desktop.ini
 # Environment & Secrets
 .env
 .venv
+.gitignore
+.geminiignore
 
 # Documentation
 docs/prds/

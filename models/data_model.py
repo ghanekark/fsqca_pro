@@ -8,6 +8,7 @@ import json
 import logging
 from typing import Dict, Any, Tuple, Optional, List
 from models.minimizer import QCAMinimizer
+from utils.logger import ResearchLogger
 
 class QCADataModel:
     def __init__(self) -> None:
@@ -17,6 +18,7 @@ class QCADataModel:
         self._full_dataframe: Optional[pd.DataFrame] = None
         self.calibration_metadata: Dict[str, Any] = {} # Metadata for calibrated columns
         self.sanitization_log: List[str] = [] # Track ingestion actions (PRD 005)
+        self.logger = ResearchLogger()
 
     def load_file(self, filepath: str) -> Tuple[bool, str]:
         """
@@ -193,9 +195,68 @@ class QCADataModel:
                 'rationale': rationale
             }
             
+            # 6. Log action (PRD 009)
+            self.logger.log_action(
+                category="CALIBRATION",
+                description=f"Calibrated '{source_col}' into fuzzy set '{new_col}' using direct method.",
+                metadata={
+                    "source": source_col,
+                    "target": new_col,
+                    "anchors": {"full": p_full, "cross": p_cross, "non": p_non},
+                    "rationale": rationale
+                }
+            )
+            
             return True, f"Successfully calibrated '{source_col}' into '{new_col}'"
         except Exception as e:
             return False, f"Error during calibration: {str(e)}"
+
+    def dichotomize_variable(self, source_col: str, threshold: float, new_col: str, rationale: str = "") -> Tuple[bool, str]:
+        """
+        Converts a continuous or fuzzy-set variable into a crisp set (0/1).
+        
+        Args:
+            source_col: Name of the source variable.
+            threshold: The value above which cases are coded as 1.
+            new_col: Name of the new crisp variable.
+            rationale: Theoretical justification for the threshold.
+            
+        Returns:
+            A tuple of (success, message).
+        """
+        if self.dataframe is None:
+            return False, "Error: No data loaded."
+
+        if source_col not in self.dataframe.columns:
+            return False, f"Error: Column '{source_col}' not found."
+
+        try:
+            # Cases > threshold are 1, <= threshold are 0 (Standard Ragin practice)
+            self.dataframe[new_col] = (self.dataframe[source_col] > threshold).astype(int)
+
+            # Store metadata (PRD 008)
+            self.calibration_metadata[new_col] = {
+                'type': 'dichotomization',
+                'source': source_col,
+                'threshold': threshold,
+                'rationale': rationale
+            }
+
+            # 6. Log action (PRD 009)
+            self.logger.log_action(
+                category="DICHOTOMIZATION",
+                description=f"Dichotomized '{source_col}' into crisp set '{new_col}' with threshold {threshold}.",
+                metadata={
+                    "source": source_col,
+                    "target": new_col,
+                    "threshold": threshold,
+                    "rationale": rationale
+                }
+            )
+
+            return True, f"Successfully dichotomized '{source_col}' into '{new_col}' with threshold {threshold}."
+        except Exception as e:
+            return False, f"Error during dichotomization: {str(e)}"
 
     def get_descriptives(self, columns):
         """
@@ -502,6 +563,18 @@ class QCADataModel:
 
         # 7. Intermediate Solution (Only easy remainders)
         intermediate_sol = minimizer.minimize(list(pos_minterms), list(easy_minterms), tie_breaker_callback=tie_breaker_callback)
+        
+        # 8. Log action (PRD 009)
+        self.logger.log_action(
+            category="MINIMIZATION",
+            description=f"Performed Quine-McCluskey minimization for outcome '{outcome_code_col if 'outcome_code_col' in locals() else 'Outcome'}'.",
+            metadata={
+                "conditions": condition_cols,
+                "frequency_threshold": freq_thresh,
+                "consistency_threshold": consist_thresh,
+                "assumptions": assumptions_dict
+            }
+        )
         
         return {
             "conditions": condition_cols,
@@ -886,6 +959,20 @@ class QCADataModel:
             sum_max = np.sum(np.maximum(x, y))
             
             coincidence = sum_min / sum_max if sum_max > 0 else 0.0
+            
+            # Log action (PRD 009/010)
+            self.logger.log_action(
+                category="COINCIDENCE_ANALYSIS",
+                description=f"Calculated set coincidence between '{var1}' and '{var2}'.",
+                metadata={
+                    "var1": var1,
+                    "var2": var2,
+                    "negate1": negate1,
+                    "negate2": negate2,
+                    "result": round(float(coincidence), 4)
+                }
+            )
+            
             return True, coincidence
         except Exception as e:
             return False, f"Error calculating coincidence: {str(e)}"

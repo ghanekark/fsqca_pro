@@ -44,6 +44,9 @@ class MainWindow(QMainWindow):
         self.action_file_save_res = QAction("Save Results...", self)
         self.file_menu.addAction(self.action_file_save_res)
         
+        self.action_file_export_log = QAction("Export Research Log...", self)
+        self.file_menu.addAction(self.action_file_export_log)
+        
         self.file_menu.addSeparator()
         
         self.action_file_quit = QAction("Quit", self)
@@ -63,6 +66,9 @@ class MainWindow(QMainWindow):
         
         self.action_vars_recode = QAction("Recode...", self)
         self.vars_menu.addAction(self.action_vars_recode)
+
+        self.action_vars_dichotomize = QAction("Dichotomize...", self)
+        self.vars_menu.addAction(self.action_vars_dichotomize)
 
         self.action_vars_calibrate = QAction("Calibration...", self)
         self.vars_menu.addAction(self.action_vars_calibrate)

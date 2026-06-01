@@ -95,8 +95,16 @@ class NecessityDialog(QDialog):
         footer_layout.addStretch()
         
         self.analyze_btn = QPushButton("Analyze Necessity")
-        self.analyze_btn.setStyleSheet("font-weight: bold; padding: 5px; background-color: #1a237e; color: white;")
-        self.analyze_btn.clicked.connect(self._handle_analyze)
+        self.analyze_btn.setStyleSheet("""
+            QPushButton {
+                font-weight: bold; 
+                padding: 5px; 
+                background-color: palette(highlight); 
+                color: palette(highlighted-text);
+                border-radius: 4px;
+            }
+        """)
+        self.analyze_btn.clicked.connect(self._on_analyze_clicked)
         footer_layout.addWidget(self.analyze_btn)
         
         layout.addLayout(footer_layout)
