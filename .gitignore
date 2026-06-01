@@ -7,11 +7,13 @@ env/
 ENV/
 
 # Build & Distribution
+*.spec
 build/
 dist/
 *.spec
 *.egg-info/
 *.egg
+release.ps1
 
 # Python Bytecode & Cache
 __pycache__/

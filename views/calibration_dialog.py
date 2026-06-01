@@ -150,6 +150,9 @@ class CalibrationDialog(QDialog):
         if thresholds:
             p_full, p_cross, p_non = thresholds
             
+            # Auto-populate the calibrated name (PRD 002 Suggestion enhancement)
+            self.new_col_edit.setText(f"f_{source_col}")
+            
             self.p_full_edit.setText(f"{p_full:.4f}")
             self.p_cross_edit.setText(f"{p_cross:.4f}")
             self.p_non_edit.setText(f"{p_non:.4f}")

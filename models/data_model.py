@@ -451,6 +451,11 @@ class QCADataModel:
             # Skip if already a fuzzy column
             if col.startswith('f_'):
                 continue
+            
+            # Skip if already a binary (crisp) column (0, 1)
+            unique_vals = set(self.dataframe[col].dropna().unique())
+            if unique_vals.issubset({0, 1, 0.0, 1.0}):
+                continue
                 
             thresholds = self.auto_calculate_thresholds(col)
             if thresholds:
