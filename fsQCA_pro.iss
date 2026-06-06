@@ -6,7 +6,7 @@
 #endif
 
 [Setup]
-AppId={D3C6E5B4-A8F1-4F9A-A3D5-7C2B7E1B5A9F}
+AppId={{D3C6E5B4-A8F1-4F9A-A3D5-7C2B7E1B5A9F}
 AppName=fsQCA_pro
 #ifndef AppVersion
   #define AppVersion "0.7.5"
