@@ -14,6 +14,7 @@ dist/
 *.egg-info/
 *.egg
 release.ps1
+logo.psd
 
 # Python Bytecode & Cache
 __pycache__/
