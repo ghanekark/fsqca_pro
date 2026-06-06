@@ -8,6 +8,9 @@
 [Setup]
 AppId={{D3C6E5B4-A8F1-4F9A-A3D5-7C2B7E1B5A9F}
 AppName=fsQCA_pro
+#ifndef AppVersion
+  #define AppVersion "1.0.0"
+#endif
 AppVersion={#AppVersion}
 AppPublisher=ghanekark
 AppPublisherURL=https://github.com/ghanekark/fsqca_pro
@@ -15,6 +18,7 @@ AppSupportURL=https://github.com/ghanekark/fsqca_pro/issues
 AppUpdatesURL=https://github.com/ghanekark/fsqca_pro/releases
 DefaultDirName={localappdata}\fsQCA_pro
 DisableProgramGroupPage=yes
+UninstallDisplayName=fsQCA_pro
 
 ; Modern UI 2.0
 WizardStyle=modern
