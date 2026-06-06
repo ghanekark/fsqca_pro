@@ -18,8 +18,6 @@ DisableProgramGroupPage=yes
 
 ; Modern UI 2.0
 WizardStyle=modern
-WizardSmallImageFile=compiler:WizModernSmallImage.bmp
-WizardImageFile=compiler:WizModernImage.bmp
 SetupIconFile=favicon.ico
 
 ; Output and Compression
@@ -29,8 +27,8 @@ SolidCompression=yes
 
 ; Privileges and Architecture
 PrivilegesRequired=lowest
-ArchitecturesAllowed=x64
-ArchitecturesInstallIn64BitMode=x64
+ArchitecturesAllowed=x64compatible
+ArchitecturesInstallIn64BitMode=x64compatible
 
 ; Version Info for Windows Explorer
 VersionInfoCompany=ghanekark

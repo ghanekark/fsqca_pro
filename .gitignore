@@ -82,3 +82,6 @@ sensitive_data/
 test_research_log.*
 *.bak
 *.tmp
+# Installer Output
+Output/
+*.psd

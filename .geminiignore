@@ -50,3 +50,7 @@ Thumbs.db
 
 # Qt Generated Resource Binaries (If you compile .qrc files)
 *_rc.py
+# Graphics & Installer Source
+*.psd
+Output/
+fsQCA_pro.iss
