@@ -20,7 +20,7 @@ DisableProgramGroupPage=yes
 WizardStyle=modern
 WizardSmallImageFile=compiler:WizModernSmallImage.bmp
 WizardImageFile=compiler:WizModernImage.bmp
-SetupIconFile=logo.ico
+SetupIconFile=favicon.ico
 
 ; Output and Compression
 OutputBaseFilename=fsQCA_pro_setup
@@ -33,7 +33,6 @@ ArchitecturesAllowed=x64
 ArchitecturesInstallIn64BitMode=x64
 
 ; Version Info for Windows Explorer
-VersionInfoVersion={#AppVersion}
 VersionInfoCompany=ghanekark
 VersionInfoDescription=fsQCA_pro Installer
 VersionInfoCopyright=Copyright (C) 2026 ghanekark
@@ -46,13 +45,13 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 
 [Files]
 Source: "dist\fsQCA_pro.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "logo.ico"; DestDir: "{app}"; Flags: ignoreversion
+Source: "favicon.ico"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 ; Start Menu Shortcut (Always created)
-Name: "{autoprograms}\fsQCA_pro"; Filename: "{app}\fsQCA_pro.exe"; IconFilename: "{app}\logo.ico"
+Name: "{autoprograms}\fsQCA_pro"; Filename: "{app}\fsQCA_pro.exe"; IconFilename: "{app}\favicon.ico"
 ; Desktop Shortcut (Optional task)
-Name: "{autodesktop}\fsQCA_pro"; Filename: "{app}\fsQCA_pro.exe"; IconFilename: "{app}\logo.ico"; Tasks: desktopicon
+Name: "{autodesktop}\fsQCA_pro"; Filename: "{app}\fsQCA_pro.exe"; IconFilename: "{app}\favicon.ico"; Tasks: desktopicon
 
 [Run]
 ; Option to launch the app immediately after installation

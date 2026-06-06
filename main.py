@@ -43,14 +43,15 @@ class AppController:
         self.view.setMinimumSize(800, 600)
 
         # Setup application icon
-        if os.path.exists("logo.png"):
+        if (os.path.exists("favicon.ico")):
+            self.app_icon = QIcon("favicon.ico")
+            self.app.setWindowIcon(self.app_icon)
+            self.view.setWindowIcon(self.app_icon)
+        elif os.path.exists("logo.png"):
             self.app_icon = QIcon("logo.png")
             self.app.setWindowIcon(self.app_icon)
             self.view.setWindowIcon(self.app_icon)
-        elif os.path.exists("logo.ico"):
-            self.app_icon = QIcon("logo.ico")
-            self.app.setWindowIcon(self.app_icon)
-            self.view.setWindowIcon(self.app_icon)
+
 
         # Apply initial theme
         current_theme = self.theme_controller.get_current_theme()
