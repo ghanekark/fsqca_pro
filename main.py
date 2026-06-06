@@ -7,6 +7,7 @@ import pandas as pd
 from PyQt6.QtWidgets import QApplication, QFileDialog, QMessageBox, QInputDialog, QProgressDialog, QDialog, QVBoxLayout, QTableWidget, QTableWidgetItem, QDialogButtonBox
 from PyQt6.QtPrintSupport import QPrinter, QPrintDialog
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QIcon
 from views.main_window import MainWindow
 from views.analysis_results_dialog import AnalysisResultsDialog
 from views.calibration_dialog import CalibrationDialog
@@ -40,6 +41,16 @@ class AppController:
 
         self.view = MainWindow()
         self.view.setMinimumSize(800, 600)
+
+        # Setup application icon
+        if os.path.exists("logo.png"):
+            self.app_icon = QIcon("logo.png")
+            self.app.setWindowIcon(self.app_icon)
+            self.view.setWindowIcon(self.app_icon)
+        elif os.path.exists("logo.ico"):
+            self.app_icon = QIcon("logo.ico")
+            self.app.setWindowIcon(self.app_icon)
+            self.view.setWindowIcon(self.app_icon)
 
         # Apply initial theme
         current_theme = self.theme_controller.get_current_theme()
