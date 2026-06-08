@@ -7,18 +7,19 @@
 
 [Setup]
 AppId={{D3C6E5B4-A8F1-4F9A-A3D5-7C2B7E1B5A9F}
-AppName=fsQCA_pro
+AppName=fsQCA Pro
 #ifndef AppVersion
   #define AppVersion "0.7.5"
 #endif
 AppVersion={#AppVersion}
-AppPublisher=ghanekark
+AppPublisher=ImmortalSoft
 AppPublisherURL=https://github.com/ghanekark/fsqca_pro
 AppSupportURL=https://github.com/ghanekark/fsqca_pro/issues
 AppUpdatesURL=https://github.com/ghanekark/fsqca_pro/releases
-DefaultDirName={autopf}\fsQCA_pro
+DefaultDirName={autopf}\fsQCA Pro
 DisableProgramGroupPage=yes
-UninstallDisplayName=fsQCA_pro
+UninstallDisplayName=fsQCA Pro
+UninstallDisplayIcon={app}\installer_icon.ico
 CloseApplications=no
 RestartApplications=no
 
@@ -34,13 +35,16 @@ SolidCompression=yes
 
 ; Privileges and Architecture
 PrivilegesRequired=admin
+PrivilegesRequiredOverridesAllowed=dialog
+MinVersion=10.0
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 
 ; Version Info for Windows Explorer
-VersionInfoCompany=ghanekark
-VersionInfoDescription=fsQCA_pro Installer
-VersionInfoCopyright=Copyright (C) 2026 ghanekark
+VersionInfoCompany=ImmortalSoft
+VersionInfoDescription=fsQCA Pro Installer
+VersionInfoCopyright=Copyright (C) 2026 ImmortalSoft
+VersionInfoVersion={#AppVersion}
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -54,13 +58,13 @@ Source: "installer_icon.ico"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 ; Start Menu Shortcut (Always created)
-Name: "{autoprograms}\fsQCA_pro"; Filename: "{app}\fsQCA_pro.exe"; IconFilename: "{app}\installer_icon.ico"
+Name: "{autoprograms}\fsQCA Pro"; Filename: "{app}\fsQCA_pro.exe"; IconFilename: "{app}\installer_icon.ico"
 ; Desktop Shortcut (Optional task)
-Name: "{autodesktop}\fsQCA_pro"; Filename: "{app}\fsQCA_pro.exe"; IconFilename: "{app}\installer_icon.ico"; Tasks: desktopicon
+Name: "{autodesktop}\fsQCA Pro"; Filename: "{app}\fsQCA_pro.exe"; IconFilename: "{app}\installer_icon.ico"; Tasks: desktopicon
 
 [Run]
 ; Option to launch the app immediately after installation
-Filename: "{app}\fsQCA_pro.exe"; Description: "{cm:LaunchProgram,fsQCA_pro}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\fsQCA_pro.exe"; Description: "{cm:LaunchProgram,fsQCA Pro}"; Flags: nowait postinstall skipifsilent
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}"
