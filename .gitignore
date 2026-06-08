@@ -6,48 +6,18 @@ venv/
 env/
 ENV/
 
-# Build & Distribution
-*.spec
+# Build & Distribution Artifacts
 build/
 dist/
+Output/
+_deleted/
 *.spec
 *.egg-info/
 *.egg
-release.ps1
-logo.psd
 
-# Python Bytecode & Cache
-__pycache__/
-*.pyc
-*.pyo
-*.pyw
-.pytest_cache/
-.mypy_cache/
-
-# Coverage & Reports
-.coverage
-htmlcov/
-nosetests.xml
-coverage.xml
-
-# Logs
-*.log
-
-# OS-Specific
-.DS_Store
-Thumbs.db
-desktop.ini
-
-# IDEs & Editors
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# Environment & Secrets (Mandatory Security)
+# Secrets & Environment (Mandatory Security)
 .env
 .env.*
-.venv
 *.key
 *.pem
 *.token
@@ -60,13 +30,26 @@ desktop.ini
 secrets/
 config/internal_configs.*
 auth_tokens.json
-.gitignore
-.geminiignore
 
-# Documentation
-docs/prds/
-docs/ragin_feature_backlog.md
-GEMINI.md
+# IDEs and Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS Clutter
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Coverage & Reports
+.coverage
+htmlcov/
+nosetests.xml
+coverage.xml
+
+# Logs
+*.log
 
 # Sensitive Data & Large Datasets
 *.csv
@@ -82,6 +65,6 @@ sensitive_data/
 test_research_log.*
 *.bak
 *.tmp
-# Installer Output
-Output/
+
+# Installer Source Graphics
 *.psd

@@ -5,223 +5,92 @@ These instructions define the operational contract for Gemini CLI when working o
 ## 1. Project Profile
 
 - **Language:** Python 3.10+
+- **Architecture:** Professional `src/` Layout (Clean-Source Layout)
 - **UI Stack:** PyQt6 `QtWidgets` only (`QMainWindow`, `QDialog`, `QPushButton`, `QTableWidget`, etc.)
-- **Theming:** Centralized Qt Style Sheets (QSS) via `styles/template.qss`
-- **Target Platforms:** Windows first; preserve macOS compatibility
-- **Architecture:** MVC with a strong controller layer
-- **Primary entry point:** `main.py`
+- **Theming:** Centralized Qt Style Sheets (QSS) via `src/styles/template.qss`
+- **Target Platforms:** Windows first (Microsoft Store submission ready); preserve macOS compatibility
+- **Primary Entry Point:** `src/main.py`
 
 Do not introduce QtQuick / QML, hybrid UI stacks, or platform-specific GUI assumptions.
 
 ---
 
-## 2. Core Engineering Rules
+## 2. Directory Structure & Workspace Management
 
-### 2.1 Scope Control
-- Make the smallest change that satisfies the request.
-- Do not refactor unrelated code.
-- Do not rename symbols, files, modules, or signals unless explicitly requested.
-- Do not perform opportunistic cleanup.
-- Preserve public APIs, signal signatures, and existing user-visible behavior unless the task requires a change.
+### 2.1 The `src/` Directory
+All application logic and source-controlled assets live here.
+- `src/main.py`: The main entry point and application controller.
+- `src/controllers/`, `src/models/`, `src/views/`, `src/utils/`: Standard MVC components.
+- `src/styles/`: Contains `template.qss` and `favicon.ico` (application icon).
 
-### 2.2 Type Safety
-- Use explicit type hints on all new functions, methods, and signal-related helpers.
-- Avoid `Any` unless required by PyQt or a third-party API boundary.
-- Prefer `Protocol`, `TypedDict`, `Enum`, `Literal`, `dataclass`, and concrete container types when they improve clarity.
+### 2.2 The `packaging/` Directory
+Contains all build-specific configurations.
+- `packaging/fsQCA_pro.iss`: Inno Setup script for Windows installer.
+- `packaging/fsQCA_pro.spec`: PyInstaller spec file for bundling the application.
+- `packaging/installer_icon.ico`: Icon specifically for the generated setup/exe.
 
-### 2.3 Python Style
-- Follow PEP 8.
-- Prefer readable, explicit code over clever code.
-- Keep functions short and single-purpose.
-- Do not introduce new architectural abstractions unless they reduce complexity immediately.
-
----
-
-## 3. Architecture Rules
-
-### 3.1 MVC Boundaries
-- `models/` contains domain logic, data processing, and state.
-- `views/` contains Qt widgets, dialogs, and presentation logic only.
-- `controllers/` contains coordination logic between models and views.
-- `utils/` contains helpers, workers, formatting, and logging utilities.
-- `styles/` contains QSS only.
-
-### 3.2 Controller Discipline
-- `main.py` may initialize the application and wire the top-level controller, but it must not accumulate unrelated feature logic.
-- Prefer not to expand `AppController` with new, unrelated workflows when a feature-specific controller or helper is the clearer boundary.
-- Prefer feature-local orchestration over a monolithic controller when adding new functionality.
-- Preserve the current controller/view/model event flow unless a change explicitly requires reworking it.
-
-### 3.3 Signal/Slot Communication
-- Use Qt signals and slots for cross-component communication.
-- Do not call deep view methods from models.
-- Do not let views reach into models for business logic.
-- Avoid direct UI updates from worker objects; emit data back to the GUI thread instead.
+### 2.3 Transient Directories (Ignored)
+These folders are generated during the build process and should never be committed or analyzed as source.
+- `dist/`: Raw executable output.
+- `build/`: Temporary build files.
+- `Output/`: Final installers and MSIX packages for the Microsoft Store.
+- `_deleted/`: Archive of old/removed files.
 
 ---
 
-## 4. Threading and Responsiveness
+## 3. Engineering Best Practices for Gemini CLI
 
-### 4.1 Non-Blocking UI
-- Never run file I/O, parsing, export/import, data transformation, or heavy computation on the GUI thread when the task may take more than a trivial amount of time.
-- Preserve the application’s responsiveness at all times.
+### 3.1 Context Efficiency
+- **Search Scope:** Always prioritize searching within the `src/` directory for code changes.
+- **Ignore Files:** Respect `.geminiignore`. Large scripts like `release.ps1` are ignored by default to save context. Read them explicitly if they need modification.
+- **Asset Loading:** Always use the `get_resource_path()` helper in `src/main.py` when adding new assets to ensure they work in both development and frozen (EXE) modes.
 
-### 4.2 Worker Pattern
-- Use the existing worker architecture in `utils/worker.py` as the default threading pattern.
-- Consider `QThreadPool` / `QRunnable` when it clearly simplifies a short-lived or isolated task, but keep any change contained and consistent with the existing worker architecture.
-- Never update Qt widgets from any background thread.
-- Use signals to return results, errors, and completion events to the GUI thread.
+### 3.2 Scope Control
+- Make the smallest safe edit that satisfies the request.
+- Do not refactor unrelated code or perform opportunistic cleanup.
+- Preserve public APIs and signal signatures.
 
-### 4.3 Thread-Safety
-- Preserve any existing interruption, pause, or tie-breaker behavior in workers.
-- Do not bypass or simplify worker synchronization without checking the full call chain.
-- Handle worker errors explicitly and surface them back to the controller or view in a controlled way.
-
----
-
-## 5. Data and Model Rules
-
-### 5.1 Model Responsibilities
-- `QCADataModel` owns the application’s Pandas/Numpy data state and transformation logic.
-- Keep business rules in the model, not in views.
-- Prefer vectorized Pandas/Numpy operations over row-by-row Python loops where practical.
-
-### 5.2 Data Loading and Export
-- Keep file loading, parsing, and export logic isolated from UI code.
-- Use clear boundaries between:
-  - user interaction
-  - model transformation
-  - result formatting
-  - file system access
-
-### 5.3 Structured Data
-- Use dataclasses for structured application data where appropriate.
-- Do not replace structured model objects with ad hoc dictionaries unless there is a concrete boundary reason.
+### 3.3 Type Safety & Python Style
+- Follow PEP 8 rigorously.
+- Use explicit type hints on all new functions and methods.
+- Prefer readable, explicit code over "clever" abstractions.
 
 ---
 
-## 6. Table and Grid UI Rules
+## 4. Architecture & UI Rules
 
-### 6.1 Current Baseline
-- The codebase currently uses `QTableWidget` extensively.
-- Preserve existing behavior unless the task specifically targets data-grid performance or refactoring.
+### 4.1 MVC Boundaries
+- Keep domain logic in `src/models/`.
+- Keep presentation logic in `src/views/`.
+- Use `src/controllers/` for coordination.
+- **Signal/Slot Communication:** Always use Qt signals for cross-component events. Do not let views reach directly into models.
 
-### 6.2 New Grid Work
-- For any new non-trivial or scalable dataset presentation, prefer `QTableView` with `QAbstractTableModel` or `QAbstractItemModel`.
-- Do not add new large item-based tables if a model/view implementation is feasible.
-- Avoid cell-by-cell population loops in the GUI thread for large datasets.
+### 4.2 Non-Blocking UI
+- Never run heavy computation or I/O on the GUI thread.
+- Use the worker pattern in `src/utils/worker.py` for background tasks.
+- Surface results and errors back to the GUI thread via signals.
 
-### 6.3 Performance Boundary
-- Treat any table population that iterates through large Pandas DataFrames as a potential UI freeze risk.
-- Move data preparation out of widget code whenever possible.
-
----
-
-## 7. Styling and Theming Rules
-
-### 7.1 Centralized QSS
-- All application styling must flow through `styles/template.qss` and the existing theme controller mechanism.
-- Do not introduce scattered `setStyleSheet()` calls in views.
-- Do not inline colors, fonts, borders, or theme tokens inside widget code unless there is a narrowly scoped exception.
-
-### 7.2 Styling Mechanism
-- Use `objectName` and Qt selectors for styling.
-- Preserve the existing `ThemeController` / `ThemeModel` pattern.
-- When adding new visual states, extend the centralized QSS instead of duplicating style logic in code.
-
-### 7.3 Theme Changes
-- Keep theme generation deterministic and reversible.
-- Do not break existing selector names or theme token substitution without a strong reason.
+### 4.3 Styling & Assets
+- **Centralized QSS:** All styling must flow through `src/styles/template.qss`. No inline `setStyleSheet()` calls.
+- **Icons:** Use `src/styles/favicon.ico` for the application window. Ensure paths are resolved via `get_resource_path()`.
 
 ---
 
-## 8. Resources and Assets
+## 5. Packaging & Automation
 
-- This project is currently text-and-layout driven.
-- Do not assume icons, images, or `.qrc` resources exist.
-- Do not add absolute filesystem paths for resources.
-- Use `pathlib` for paths and keep code compatible with Windows and future macOS builds.
-- If assets are introduced later, prefer a Qt resource approach or a clearly defined asset path strategy.
+### 5.1 The `release.ps1` Script
+- This script is the "one-click" automation for building and hosting the app.
+- It handles cleanup, PyInstaller building, Inno Setup compilation, and GitHub/GitHub Pages hosting.
+- **Version Handling:** It manages both `vX.Y.Z` tags and numeric `X.Y.Z` metadata for Windows.
 
----
-
-## 9. Error Handling and Logging
-
-### 9.1 Logging
-- Use the `logging` module.
-- Do not use `print()` for normal application flow.
-- Use `logger.debug()`, `logger.info()`, `logger.warning()`, `logger.error()`, and `logger.exception()` appropriately.
-
-### 9.2 User-Facing Errors
-- Use `QMessageBox.critical()` for fatal or blocking errors.
-- Use `QMessageBox.warning()` for validation and recoverable issues.
-- Use `QMessageBox.information()` for important user confirmations or state changes.
-- Keep user-facing messages concise, accurate, and actionable.
-
-### 9.3 Exception Handling
-- Catch exceptions only where you can handle them meaningfully.
-- Do not swallow exceptions silently.
-- Preserve stack traces in logs for unexpected failures.
+### 5.2 Build Artifacts
+- Treat `dist/`, `build/`, and `Output/` as disposable.
+- Always use relative paths in `.iss` and `.spec` files (e.g., `../src/...`) to support the project hierarchy.
 
 ---
 
-## 10. Testing Rules
+## 6. Testing & Validation
 
-- Require tests for algorithmic changes, bug fixes, and non-trivial business logic changes.
-- Use `pytest` for unit tests.
-- Use `pytest-qt` for Qt widget and signal/slot tests.
+- Use `pytest` for unit tests and `pytest-qt` for widget tests.
 - Add regression tests when fixing bugs.
-- Avoid changing behavior without adding or updating tests when practical.
-- Keep GUI tests focused on interaction and state, not implementation details.
-
----
-
-## 11. Packaging and Distribution
-
-- Preserve compatibility with Windows packaging.
-- Keep code compatible with PyInstaller builds.
-- Avoid runtime assumptions that break frozen executables.
-- Do not depend on fragile working-directory behavior.
-- Keep file/resource access explicit and portable.
-
----
-
-## 12. Modification Boundaries
-
-When implementing a change:
-
-1. Read the surrounding code first.
-2. Identify the exact affected path through views, controllers, models, and workers.
-3. Make the smallest safe edit that satisfies the request.
-4. Preserve existing formatting and local conventions.
-5. Avoid collateral refactors unless the task explicitly calls for them.
-6. Do not introduce new dependencies unless the task explicitly requires them.
-7. Do not alter unrelated dialogs, signals, or controllers.
-
-If a request appears to require a broader architectural change, isolate the smallest useful increment first and expand only when needed to complete the requested work cleanly.
-
----
-
-## 13. Default Implementation Preferences
-
-When multiple valid approaches exist, prefer:
-- existing project patterns over new patterns
-- explicit code over implicit magic
-- controller coordination over view logic
-- model-centric data processing over UI-side processing
-- centralized QSS over widget-local styling
-- small, testable functions over large routines
-
----
-
-## 14. Deliverable Expectations
-
-For code changes:
-- Provide only the requested code or the smallest necessary diff.
-- Do not rewrite surrounding modules unless asked.
-- Keep behavior consistent unless the user requests a change.
-- Preserve the current application architecture unless the task explicitly targets architecture or the requested change depends on a broader adjustment.
-
-For analysis:
-- Base conclusions on the repository contents.
-- Do not speculate when the codebase provides a clear answer.
+- **Validation is Mandatory:** Never assume a change works without verification. Run the app or the relevant tests before finishing a task.

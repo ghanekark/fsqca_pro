@@ -29,6 +29,16 @@ from utils.worker import AnalysisWorker
 from utils.formatter import ResultFormatter
 from utils.logger import ResearchLogger
 
+def get_resource_path(relative_path: str) -> str:
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        # In development, look relative to this script
+        base_path = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(base_path, relative_path)
+
 class AppController:
     def __init__(self) -> None:
         # Enable High-DPI scaling before creating QApplication
@@ -43,12 +53,9 @@ class AppController:
         self.view.setMinimumSize(800, 600)
 
         # Setup application icon
-        if (os.path.exists("favicon.ico")):
-            self.app_icon = QIcon("favicon.ico")
-            self.app.setWindowIcon(self.app_icon)
-            self.view.setWindowIcon(self.app_icon)
-        elif os.path.exists("logo.png"):
-            self.app_icon = QIcon("logo.png")
+        icon_path = get_resource_path(os.path.join("styles", "favicon.ico"))
+        if os.path.exists(icon_path):
+            self.app_icon = QIcon(icon_path)
             self.app.setWindowIcon(self.app_icon)
             self.view.setWindowIcon(self.app_icon)
 

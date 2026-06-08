@@ -24,10 +24,11 @@ RestartApplications=no
 
 ; Modern UI 2.0
 WizardStyle=modern
-SetupIconFile=favicon.ico
+SetupIconFile=installer_icon.ico
 
 ; Output and Compression
 OutputBaseFilename=fsQCA_pro_setup
+OutputDir=..\Output
 Compression=lzma2/max
 SolidCompression=yes
 
@@ -48,14 +49,14 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 
 [Files]
-Source: "dist\fsQCA_pro.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "favicon.ico"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\dist\fsQCA_pro.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "installer_icon.ico"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 ; Start Menu Shortcut (Always created)
-Name: "{autoprograms}\fsQCA_pro"; Filename: "{app}\fsQCA_pro.exe"; IconFilename: "{app}\favicon.ico"
+Name: "{autoprograms}\fsQCA_pro"; Filename: "{app}\fsQCA_pro.exe"; IconFilename: "{app}\installer_icon.ico"
 ; Desktop Shortcut (Optional task)
-Name: "{autodesktop}\fsQCA_pro"; Filename: "{app}\fsQCA_pro.exe"; IconFilename: "{app}\favicon.ico"; Tasks: desktopicon
+Name: "{autodesktop}\fsQCA_pro"; Filename: "{app}\fsQCA_pro.exe"; IconFilename: "{app}\installer_icon.ico"; Tasks: desktopicon
 
 [Run]
 ; Option to launch the app immediately after installation

@@ -595,7 +595,20 @@ class QCADataModel:
         if self.dataframe is None:
             return None
 
-        outcome_data = self.dataframe[outcome_col].values
+        # Check for negation prefix
+        negate = False
+        col_name = outcome_col
+        if outcome_col.startswith('~'):
+            negate = True
+            col_name = outcome_col[1:]
+
+        if col_name not in self.dataframe.columns:
+            raise KeyError(f"Outcome column '{col_name}' not found in dataframe columns: {list(self.dataframe.columns)}")
+
+        outcome_data = self.dataframe[col_name].values
+        if negate:
+            outcome_data = 1.0 - outcome_data
+
         sum_outcome = np.sum(outcome_data)
         if sum_outcome == 0:
             return None

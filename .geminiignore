@@ -1,7 +1,7 @@
 # Scoped Ignorance for Gemini CLI
 
 # Python
-__pycache__/
+**/__pycache__/
 *.pyc
 *.pyo
 *.pyd
@@ -15,12 +15,16 @@ venv_release/
 env/
 ENV/
 
-# Build & Distribution
+# Build & Distribution Artifacts
 build/
 dist/
+Output/
+_deleted/
 *.spec
 *.egg-info/
 *.egg
+
+# Scripts
 release.ps1
 
 # Secrets & Environment
@@ -48,9 +52,5 @@ Thumbs.db
 *.dat
 *.meta.json
 
-# Qt Generated Resource Binaries (If you compile .qrc files)
+# Qt Generated Resource Binaries
 *_rc.py
-# Graphics & Installer Source
-*.psd
-Output/
-fsQCA_pro.iss
