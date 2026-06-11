@@ -22,6 +22,7 @@ UninstallDisplayName=fsQCA Pro
 UninstallDisplayIcon={app}\installer_icon.ico
 CloseApplications=force
 RestartApplications=no
+LicenseFile=..\LICENSE
 
 ; Modern UI 2.0
 WizardStyle=modern
