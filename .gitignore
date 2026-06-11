@@ -14,6 +14,7 @@ _deleted/
 *.spec
 *.egg-info/
 *.egg
+release.ps1
 
 # Secrets & Environment (Mandatory Security)
 .env
@@ -65,6 +66,9 @@ sensitive_data/
 test_research_log.*
 *.bak
 *.tmp
+GEMINI.md
+.geminiignore
+.gitignore
 
 # Installer Source Graphics
 *.psd
