@@ -68,3 +68,4 @@ test_research_log.*
 
 # Installer Source Graphics
 *.psd
+.aider*

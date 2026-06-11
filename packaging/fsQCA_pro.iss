@@ -20,7 +20,7 @@ DefaultDirName={autopf}\fsQCA Pro
 DisableProgramGroupPage=yes
 UninstallDisplayName=fsQCA Pro
 UninstallDisplayIcon={app}\installer_icon.ico
-CloseApplications=no
+CloseApplications=force
 RestartApplications=no
 
 ; Modern UI 2.0
@@ -68,3 +68,13 @@ Filename: "{app}\fsQCA_pro.exe"; Description: "{cm:LaunchProgram,fsQCA Pro}"; Fl
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}"
+
+[Code]
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+begin
+  if CurUninstallStep = usPostUninstall then
+  begin
+    // Attempt to remove the installation directory and any remaining files
+    DelTree(ExpandConstant('{app}'), True, True, True);
+  end;
+end;
